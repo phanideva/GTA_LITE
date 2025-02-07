@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment files
+venv/
+env/
+.venv/
+
+# Pygame temporary files
+*.log
+*.tmp
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Game Save Data
+savegame.json
+*.sav
+
+# IDE specific files
+.vscode/
+.idea/
+*.iml
+
+# Python cache files
+*.cache
+*.egg-info/
+*.pyo
+
+# Ignore logs and debug dumps
+logs/
+*.log
+debug.log
+
+# Ignore compiled Cython files (if used)
+*.c
+*.so
+*.o
