@@ -6,44 +6,78 @@ Rise from a nobody to the underboss of the most powerful crime family in Gangste
 
 ---
 
+## � v2.0 - Modern GTA Redesign
+
+The game has been completely redesigned with modern GTA-style systems:
+
+- **New Player Controller** - 8 states, realistic movement, smooth camera
+- **New Vehicle System** - VehicleBody3D physics, 6 vehicle types
+- **New AI System** - Behavior trees, civilians, police, gangs
+- **New World Generation** - Procedural city with districts
+- **New Mission System** - Story chapters, side missions, objectives
+- **New Time/Weather** - Day/night cycle, 6 weather types
+- **New HUD** - Modern interface with minimap
+
+See [MODERN_GTA_REDESIGN.md](MODERN_GTA_REDESIGN.md) for technical details.
+
+---
+
 ## 🎮 Features
 
 ### Story Campaign
-- **10 story missions** across 5 chapters with full narrative arc
+
+- **10+ story missions** across 6 chapters with full narrative arc
 - **Character dialogue system** with typewriter text and color-coded speakers
 - **Memorable characters**: Rico, Marco, Don Vittorio, and more
 - Story progression from street-level thug to crime underboss
 
 ### Open World
+
 - Explorable 3D city with roads, buildings, parks, shops, and landmarks
-- Dynamic day/night cycle with atmospheric lighting
-- 50+ trees, streetlights, benches, dumpsters, and environmental details
-- 8 unique shop locations across the city
+- **Dynamic day/night cycle** with atmospheric lighting
+- **6 weather types**: Clear, Cloudy, Overcast, Rain, Storm, Fog
+- Procedural city generation with multiple districts
+- Street lights, traffic lights, vegetation
 
 ### Combat System
-- **4 weapon types**: Fists, Pistol, Rifle, Shotgun
-- Ammo management and weapon switching (keys 1-4)
+
+- **5 weapon types**: Fists, Pistol, SMG, Rifle, Shotgun
+- Ammo management and weapon switching
+- Aiming system with zoom
 - Muzzle flash, tracer rounds, and hit impact effects
-- Melee combat with area-of-effect damage
 
 ### Vehicles
-- **Cars** — Fully drivable with acceleration, braking, and steering
-- **Motorcycles** — Lean-into-turns physics
-- **Bicycles** — Pedal-powered with realistic speed
-- NPC traffic with AI-driven patrol cars
+
+- **6 vehicle types**: Sedan, Sports, SUV, Truck, Motorcycle, Boat
+- Realistic VehicleBody3D physics
+- Automatic transmission
+- Vehicle damage system
+- NPC traffic with AI driving
 
 ### AI Systems
-- **Police AI** — Patrol, chase, shoot, and arrest based on wanted level (1-6 stars)
-- **Gang AI** — Territory-based enemies that only attack when provoked
-- **Pedestrians** — Civilian NPCs that wander the city and flee from danger
-- **Animals** — Dogs and cats with wander/flee behavior
+
+- **Police AI** — Patrol, chase, combat with 1-6★ wanted level response
+- **Gang AI** — Territory-based enemies with group coordination
+- **Civilian AI** — NPCs that wander, flee, and call police
+- **Traffic AI** — AI drivers following road rules
+
+### Modern HUD
+
+- Health and armor bars
+- Money display with animations
+- Wanted level stars
+- Weapon and ammo display
+- Real-time minimap
+- Mission objectives
 
 ### Sound & Audio
-- Procedural sound effects (gunshots, melee, sirens, pickups, death)
-- Different audio for each weapon type
+
+- Procedural sound effects
+- Radio system with multiple stations
 - Mission completion fanfare
 
 ### Save/Load System
+
 - Save progress at any time (Alt+S)
 - Load saved game (Alt+L)
 - Persistent money, stats, and mission progress
@@ -52,20 +86,20 @@ Rise from a nobody to the underboss of the most powerful crime family in Gangste
 
 ## 🕹️ Controls
 
-| Action | Key |
-|--------|-----|
-| Move | W / A / S / D |
-| Look Around | Mouse |
-| Sprint | Shift |
-| Jump | Space |
-| Shoot | Left Mouse Button |
-| Melee Attack | F |
-| Enter/Exit Vehicle | E |
-| Switch Weapon | 1 / 2 / 3 / 4 |
-| Start Mission | M |
-| Save Game | Alt + S |
-| Load Game | Alt + L |
-| Pause | Escape |
+| Action             | Key               |
+| ------------------ | ----------------- |
+| Move               | W / A / S / D     |
+| Look Around        | Mouse             |
+| Sprint             | Shift             |
+| Jump               | Space             |
+| Shoot              | Left Mouse Button |
+| Melee Attack       | F                 |
+| Enter/Exit Vehicle | E                 |
+| Switch Weapon      | 1 / 2 / 3 / 4     |
+| Start Mission      | M                 |
+| Save Game          | Alt + S           |
+| Load Game          | Alt + L           |
+| Pause              | Escape            |
 
 ---
 
@@ -91,6 +125,7 @@ Everything leads to this. Take down Snake Eye and his elite soldiers in an all-o
 ## 🚀 Quick Start
 
 ### Play from Source
+
 1. Download and install [Godot 4.6+](https://godotengine.org/download) (Standard version)
 2. Clone this repository:
    ```bash
@@ -100,6 +135,7 @@ Everything leads to this. Take down Snake Eye and his elite soldiers in an all-o
 4. Press **F5** to play!
 
 ### Build Executable
+
 See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for detailed build and distribution steps.
 
 ---
@@ -164,13 +200,13 @@ godot_project/
 
 ## 📋 System Requirements
 
-| | Minimum |
-|---|---|
-| **OS** | Windows 10 (64-bit) |
-| **GPU** | OpenGL 3.3 compatible |
-| **RAM** | 2 GB |
-| **Storage** | 50 MB |
-| **Input** | Keyboard + Mouse |
+|             | Minimum               |
+| ----------- | --------------------- |
+| **OS**      | Windows 10 (64-bit)   |
+| **GPU**     | OpenGL 3.3 compatible |
+| **RAM**     | 2 GB                  |
+| **Storage** | 50 MB                 |
+| **Input**   | Keyboard + Mouse      |
 
 ---
 
@@ -188,4 +224,4 @@ This project is open source. Feel free to modify and distribute.
 
 ---
 
-*Gangster Town Adventures — From nobody to kingpin. The streets are yours.*
+_Gangster Town Adventures — From nobody to kingpin. The streets are yours._

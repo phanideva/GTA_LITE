@@ -3,9 +3,62 @@
 ## Overview
 This guide lists recommended FREE (CC0 / CC-BY) asset sources for the 3D GTA game.
 
----
+## 1. Realistic Character Models (Mixamo)
 
-## 🎮 Top Free Asset Websites
+Since the procedural characters in `character_model.gd` are blocky, you can replace them with AAA-quality characters using Adobe Mixamo (it's completely free).
+
+**Steps to Import Characters:**
+1. Go to [mixamo.com](https://www.mixamo.com/).
+2. Create an Adobe account or log in.
+3. Browse the **Characters** tab. Recommended realistic characters:
+   - *Remy* or *Kachin* (for the main player, Leo)
+   - *Vanguard* or *SWAT* (for Police/Enforcers)
+   - *Streetwear* characters (for Pedestrians and Syndicate members)
+4. Click **Download** and select **Format: FBX (.fbx)** and **Pose: T-Pose**.
+5. Move the downloaded `.fbx` files into your Godot project under `assets/models/characters/`.
+6. In Godot, double-click the imported `.fbx`, go to the **Import** tab, and generate the Rig/Bones.
+7. Open `player.tscn` or `pedestrian.tscn`, delete the old `PlayerModel` (the script-generated one), and drag your new Mixamo scene into the player tree.
+
+## 2. Realistic Vehicles (Sketchfab)
+
+You can download high-poly cars from Sketchfab to replace the script-generated primitives. The `vehicle.gd` script relies on four wheels to spin.
+
+**Steps to Import Cars:**
+1. Go to [sketchfab.com](https://sketchfab.com/).
+2. Search for "Downloadable Car" or "Sedan" and check the **Downloadable** filter. Look for low-to-mid poly realistic cars (ensure they are CC-Attribution free).
+3. Download the GLTF/GLB format.
+4. Move the files to `assets/models/vehicles/`.
+5. Open `vehicle.tscn`. Delete the procedural meshes inside `_build_car_model()` or simply drag your new car GLB into the scene.
+6. Make sure the car object has 4 child nodes for tires (e.g., `Wheel_FL`, `Wheel_FR`, `Wheel_BL`, `Wheel_BR`). Update `wheel_nodes = [$Wheel_FL, $Wheel_FR, ...]` in `vehicle.gd` so the script can spin them automatically.
+
+## 3. City Map & Environment
+
+Instead of generating block buildings, download a pre-built realistic city pack.
+
+**Steps to Import the City:**
+1. Search Sketchfab or the Unity Asset Store (using an FBX converter) for "Free City Block" or "City Environment".
+2. Download the GLTF/GLB files and place them in `assets/models/world/`.
+3. Drag the city models into `main.tscn`.
+4. **CRITICAL:** Select the city mesh in the Godot editor, click the **Mesh** menu at the top of the 3D viewport, and select **Create Trimesh Static Body**. This automatically generates the floor/wall collisions so the Player and NPCs don't fall through the map!
+
+## 4. Audio (FreeSound)
+
+For the GTA-style intro music, gunshots, and radio.
+
+**Steps to Import Audio:**
+1. Go to [freesound.org](https://freesound.org/).
+2. Search for "Hip Hop Beat" or "Action Music".
+3. Download the `.wav` or `.ogg` files.
+4. Place them in `assets/audio/`.
+5. Open `main_menu.tscn` and add an `AudioStreamPlayer`. Assign your new music file to the `Stream` property and check the `Autoplay` box.
+
+## 5. Final Configuration
+
+To ensure your game bundles correctly:
+1. Go to **Project > Export** in Godot.
+2. Add a preset (Windows Desktop, macOS, or Linux).
+3. Under the **Resources** tab, make sure `Filters to export non-resource files/folders` includes `*.fbx, *.glb, *.wav, *.mp3, *.ogg`.
+4. Click **Export Project** to generate the final playable `.exe` or `.app` bundle.
 
 ### 1. Sketchfab (https://sketchfab.com)
 **Best For:** High-quality 3D models

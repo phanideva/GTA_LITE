@@ -42,9 +42,9 @@ debug.log
 *.o
 
 # Large binary files - do not push to git
-GangsterTownAdventures.zip
-GangsterTownAdventures/
+*.zip
 *.exe
+*.bin
 
 # Godot import cache
 .godot/
