@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+  <rect width="128" height="128" rx="16" fill="#1a1a2e"/>
+  <text x="64" y="58" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#f2b20e" text-anchor="middle">GTA</text>
+  <text x="64" y="86" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="#e6571a" text-anchor="middle">ADVENTURES</text>
+</svg>

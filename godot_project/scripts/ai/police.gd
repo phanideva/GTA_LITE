@@ -1,9 +1,9 @@
 extends CharacterBody3D
-# Police AI — humanoid cop with blue uniform and badge
+# Police AI — cops only pursue when player has wanted level
 
-@export var speed = 12.0
-@export var detect_range = 80.0
-@export var health = 120
+@export var speed = 10.0
+@export var detect_range = 60.0
+@export var health = 150
 
 const GRAVITY = -20.0
 var is_dead = false
@@ -51,18 +51,23 @@ func _physics_process(delta):
 
 	var is_moving = false
 
-	if target and Globals.wanted_level > 0:
+	if Globals.wanted_level > 0 and target:
 		chase_target(delta)
 		is_moving = true
-		if Globals.wanted_level >= 3 and shoot_cooldown <= 0:
+		# Only shoot at high wanted levels
+		if Globals.wanted_level >= 4 and shoot_cooldown <= 0:
 			shoot_at_player()
 	else:
 		patrol(delta)
 		is_moving = velocity.length() > 0.5
+		# Wanted level decays over time when cops can't see player
 		if Globals.wanted_level > 0:
-			sight_blocked_timer += delta
-			if sight_blocked_timer >= 10.0:
-				Globals.wanted_level = max(0, Globals.wanted_level - 1)
+			if not target:
+				sight_blocked_timer += delta
+				if sight_blocked_timer >= 15.0:
+					Globals.wanted_level = max(0, Globals.wanted_level - 1)
+					sight_blocked_timer = 0.0
+			else:
 				sight_blocked_timer = 0.0
 		else:
 			sight_blocked_timer = 0.0
@@ -100,9 +105,12 @@ func shoot_at_player():
 	get_parent().add_child(bullet)
 	bullet.global_position = global_position + Vector3(0, 1.5, 0)
 	var dir = (target.global_position - global_position).normalized()
-	bullet.launch(dir, 80.0)
-	bullet.damage = 15
-	shoot_cooldown = 1.5
+	# Add some inaccuracy so player doesn't die instantly
+	dir.x += randf_range(-0.15, 0.15)
+	dir.z += randf_range(-0.15, 0.15)
+	bullet.launch(dir.normalized(), 70.0)
+	bullet.damage = 10
+	shoot_cooldown = 2.0
 
 func patrol(delta):
 	patrol_timer -= delta
@@ -116,8 +124,12 @@ func patrol(delta):
 
 func arrest_player():
 	if target and target.has_method("take_damage"):
+		# Arrest = lose money and wanted level, not die
 		Globals.wanted_level = 0
-		target.take_damage(10)
+		Globals.player_money = max(0, Globals.player_money - 500)
+		target.health = target.max_health  # Reset health on arrest
+		target.global_position = Vector3(0, 2, 0)  # Respawn
+		print("BUSTED! Lost $500.")
 
 func take_damage(amount: int):
 	health -= amount

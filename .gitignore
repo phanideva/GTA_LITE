@@ -40,3 +40,11 @@ debug.log
 *.c
 *.so
 *.o
+
+# Large binary files - do not push to git
+GangsterTownAdventures.zip
+GangsterTownAdventures/
+*.exe
+
+# Godot import cache
+.godot/

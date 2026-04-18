@@ -18,6 +18,10 @@ func _ready():
 	create_benches()
 	create_fences()
 	create_dumpsters()
+	create_fire_hydrants()
+	create_traffic_cones()
+	create_bus_stops()
+	create_sidewalks()
 	setup_lighting()
 	setup_sky()
 
@@ -513,12 +517,155 @@ func create_dumpsters():
 		lid.position = pos + Vector3(0, 1.24, 0)
 		add_child(lid)
 
+# ═══════════════════════ FIRE HYDRANTS ═══════════════════════
+func create_fire_hydrants():
+	var positions = [
+		Vector3(8, 0, 4), Vector3(-8, 0, -4), Vector3(30, 0, 4),
+		Vector3(-30, 0, -4), Vector3(52, 0, 4), Vector3(-52, 0, -4),
+		Vector3(4, 0, 26), Vector3(-4, 0, -26), Vector3(4, 0, 48),
+	]
+	for pos in positions:
+		var hydrant = Node3D.new()
+		hydrant.position = pos
+		# Body
+		var body = MeshInstance3D.new()
+		var bm = CylinderMesh.new()
+		bm.top_radius = 0.12
+		bm.bottom_radius = 0.15
+		bm.height = 0.6
+		bm.material = _make_mat(Color(0.85, 0.15, 0.1), 0.5, 0.3)
+		body.mesh = bm
+		body.position.y = 0.3
+		hydrant.add_child(body)
+		# Cap
+		var cap = MeshInstance3D.new()
+		var cm = CylinderMesh.new()
+		cm.top_radius = 0.08
+		cm.bottom_radius = 0.14
+		cm.height = 0.1
+		cm.material = _make_mat(Color(0.85, 0.15, 0.1), 0.5, 0.3)
+		cap.mesh = cm
+		cap.position.y = 0.65
+		hydrant.add_child(cap)
+		# Side nozzle
+		var nozzle = MeshInstance3D.new()
+		var nm = CylinderMesh.new()
+		nm.top_radius = 0.04
+		nm.bottom_radius = 0.04
+		nm.height = 0.12
+		nm.material = _make_mat(Color(0.7, 0.7, 0.1), 0.4, 0.5)
+		nozzle.mesh = nm
+		nozzle.position = Vector3(0.12, 0.4, 0)
+		nozzle.rotation.z = PI / 2
+		hydrant.add_child(nozzle)
+		add_child(hydrant)
+
+# ═══════════════════════ TRAFFIC CONES ═══════════════════════
+func create_traffic_cones():
+	# Place cones near construction areas
+	var cone_groups = [
+		Vector3(40, 0, 0), Vector3(-40, 0, 0), Vector3(0, 0, 44),
+	]
+	for base in cone_groups:
+		for i in range(4):
+			var cone = Node3D.new()
+			cone.position = base + Vector3(i * 1.2, 0, 0)
+			var body = MeshInstance3D.new()
+			var cm = CylinderMesh.new()
+			cm.top_radius = 0.02
+			cm.bottom_radius = 0.15
+			cm.height = 0.5
+			cm.material = _make_mat(Color(1.0, 0.5, 0.0), 0.6)
+			body.mesh = cm
+			body.position.y = 0.25
+			cone.add_child(body)
+			# White stripe
+			var stripe = MeshInstance3D.new()
+			var sm = CylinderMesh.new()
+			sm.top_radius = 0.06
+			sm.bottom_radius = 0.09
+			sm.height = 0.08
+			sm.material = _make_mat(Color(0.95, 0.95, 0.95))
+			stripe.mesh = sm
+			stripe.position.y = 0.32
+			cone.add_child(stripe)
+			add_child(cone)
+
+# ═══════════════════════ BUS STOPS ═══════════════════════
+func create_bus_stops():
+	var positions = [Vector3(22, 0, 6), Vector3(-22, 0, -6), Vector3(44, 0, 6)]
+	for pos in positions:
+		var stop = Node3D.new()
+		stop.position = pos
+		# Post
+		var post = MeshInstance3D.new()
+		var pm = CylinderMesh.new()
+		pm.top_radius = 0.05
+		pm.bottom_radius = 0.05
+		pm.height = 3.0
+		pm.material = _make_mat(Color(0.5, 0.5, 0.5), 0.4, 0.5)
+		post.mesh = pm
+		post.position.y = 1.5
+		stop.add_child(post)
+		# Sign
+		var sign = MeshInstance3D.new()
+		var sgn = BoxMesh.new()
+		sgn.size = Vector3(0.6, 0.4, 0.04)
+		var sign_mat = StandardMaterial3D.new()
+		sign_mat.albedo_color = Color(0.1, 0.3, 0.7)
+		sign_mat.emission_enabled = true
+		sign_mat.emission = Color(0.1, 0.2, 0.5)
+		sign_mat.emission_energy_multiplier = 0.2
+		sgn.material = sign_mat
+		sign.mesh = sgn
+		sign.position = Vector3(0, 2.8, 0)
+		stop.add_child(sign)
+		# Shelter roof
+		var roof = MeshInstance3D.new()
+		var rm = BoxMesh.new()
+		rm.size = Vector3(2.5, 0.08, 1.5)
+		rm.material = _make_mat(Color(0.3, 0.3, 0.35), 0.5, 0.3)
+		roof.mesh = rm
+		roof.position = Vector3(0, 2.5, -0.5)
+		stop.add_child(roof)
+		# Bench
+		var bench = MeshInstance3D.new()
+		var bm = BoxMesh.new()
+		bm.size = Vector3(2.0, 0.06, 0.35)
+		bm.material = _make_mat(Color(0.4, 0.25, 0.12))
+		bench.mesh = bm
+		bench.position = Vector3(0, 0.5, -0.8)
+		stop.add_child(bench)
+		add_child(stop)
+
+# ═══════════════════════ SIDEWALKS ═══════════════════════
+func create_sidewalks():
+	# Raised sidewalk curbs along roads
+	for i in range(-5, 6):
+		for is_ns in [true, false]:
+			# Sidewalk on each side of the road
+			for side in [-1, 1]:
+				var sw = MeshInstance3D.new()
+				var swm = BoxMesh.new()
+				if is_ns:
+					swm.size = Vector3(1.2, 0.12, 500)
+					sw.position = Vector3(i * 22 + side * 3.2, 0.06, 0)
+				else:
+					swm.size = Vector3(500, 0.12, 1.2)
+					sw.position = Vector3(0, 0.06, i * 22 + side * 3.2)
+				swm.material = _make_mat(Color(0.55, 0.55, 0.5), 0.9)
+				sw.mesh = swm
+				add_child(sw)
+
 # ═══════════════════════ LIGHTING ═══════════════════════
 func setup_lighting():
 	sun = DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.light_energy = 1.2
+	sun.light_energy = 1.4
 	sun.shadow_enabled = true
+	sun.shadow_blur = 1.5
+	sun.directional_shadow_max_distance = 200.0
+	sun.light_color = Color(1.0, 0.95, 0.85)
 	add_child(sun)
 
 func setup_sky():
@@ -527,19 +674,41 @@ func setup_sky():
 	env.background_mode = Environment.BG_SKY
 	var sky = Sky.new()
 	var proc_sky = ProceduralSkyMaterial.new()
-	proc_sky.sky_top_color = Color(0.15, 0.4, 0.85)
-	proc_sky.sky_horizon_color = Color(0.65, 0.75, 0.95)
-	proc_sky.ground_bottom_color = Color(0.2, 0.5, 0.2)
+	proc_sky.sky_top_color = Color(0.15, 0.35, 0.75)
+	proc_sky.sky_horizon_color = Color(0.55, 0.7, 0.95)
+	proc_sky.ground_bottom_color = Color(0.18, 0.45, 0.18)
+	proc_sky.ground_horizon_color = Color(0.55, 0.65, 0.55)
+	proc_sky.sun_angle_max = 40.0
+	proc_sky.sun_curve = 0.1
 	sky.sky_material = proc_sky
 	env.sky = sky
+
+	# Ambient lighting from sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.5
+	env.ambient_light_energy = 0.6
+	env.ambient_light_sky_contribution = 1.0
+
+	# Tone mapping for cinematic look
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_exposure = 1.1
+
+	# Glow/bloom for neon signs and lights
 	env.glow_enabled = true
-	env.glow_intensity = 0.4
+	env.glow_intensity = 0.6
+	env.glow_bloom = 0.15
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
+
+	# Fog for depth/atmosphere
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.7, 0.75, 0.85)
-	env.fog_density = 0.001
+	env.fog_light_color = Color(0.65, 0.72, 0.85)
+	env.fog_density = 0.0008
+	env.fog_aerial_perspective = 0.5
+
+	# SSAO for depth in shadows
+	env.ssao_enabled = true
+	env.ssao_radius = 1.5
+	env.ssao_intensity = 1.5
+
 	we.environment = env
 	add_child(we)
 

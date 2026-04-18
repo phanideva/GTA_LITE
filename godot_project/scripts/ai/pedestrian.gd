@@ -85,8 +85,27 @@ func _physics_process(delta):
 	move_and_slide()
 
 func choose_new_direction():
-	wander_direction = Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized()
-	wander_timer = randf_range(3.0, 8.0)
+	# Walk along sidewalks (parallel to road grid at offset of ~4 units from road center)
+	# Roads run at multiples of 22, so sidewalks are at those positions +/- 4
+	var pos = global_position
+	# Snap to nearest road direction and walk along it
+	var nearest_road_x = round(pos.x / 22.0) * 22.0
+	var nearest_road_z = round(pos.z / 22.0) * 22.0
+	var dist_to_x_road = abs(pos.x - nearest_road_x)
+	var dist_to_z_road = abs(pos.z - nearest_road_z)
+
+	if dist_to_x_road < dist_to_z_road:
+		# Near an X-aligned road, walk north/south along it
+		wander_direction = Vector3(0, 0, [-1.0, 1.0][randi() % 2])
+	else:
+		# Near a Z-aligned road, walk east/west along it
+		wander_direction = Vector3([-1.0, 1.0][randi() % 2], 0, 0)
+
+	# Keep within city bounds
+	if abs(pos.x) > 80: wander_direction.x = -sign(pos.x)
+	if abs(pos.z) > 80: wander_direction.z = -sign(pos.z)
+	wander_direction = wander_direction.normalized()
+	wander_timer = randf_range(4.0, 10.0)
 
 func take_damage(amount: int):
 	health -= amount

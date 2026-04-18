@@ -33,6 +33,17 @@ static func create_material(color: Color, emission: Color = Color.BLACK) -> Stan
 	return mat
 
 func build():
+	# NECK
+	var neck = MeshInstance3D.new()
+	var neck_m = CylinderMesh.new()
+	neck_m.top_radius = 0.06
+	neck_m.bottom_radius = 0.07
+	neck_m.height = 0.12
+	neck_m.material = create_material(skin_color)
+	neck.mesh = neck_m
+	neck.position = Vector3(0, 1.44, 0)
+	add_child(neck)
+
 	# HEAD
 	head_node = Node3D.new()
 	head_node.name = "Head"
@@ -69,6 +80,36 @@ func build():
 		eye.position = Vector3(side * 0.055, 0.03, 0.12)
 		head_node.add_child(eye)
 
+	# Nose
+	var nose = MeshInstance3D.new()
+	var nose_m = SphereMesh.new()
+	nose_m.radius = 0.025
+	nose_m.height = 0.04
+	nose_m.material = create_material(skin_color.darkened(0.05))
+	nose.mesh = nose_m
+	nose.position = Vector3(0, -0.01, 0.14)
+	head_node.add_child(nose)
+
+	# Mouth
+	var mouth = MeshInstance3D.new()
+	var mouth_m = BoxMesh.new()
+	mouth_m.size = Vector3(0.06, 0.015, 0.01)
+	mouth_m.material = create_material(Color(0.65, 0.35, 0.3))
+	mouth.mesh = mouth_m
+	mouth.position = Vector3(0, -0.05, 0.13)
+	head_node.add_child(mouth)
+
+	# Ears
+	for side in [-1, 1]:
+		var ear = MeshInstance3D.new()
+		var ear_m = SphereMesh.new()
+		ear_m.radius = 0.03
+		ear_m.height = 0.04
+		ear_m.material = create_material(skin_color)
+		ear.mesh = ear_m
+		ear.position = Vector3(side * 0.14, 0.02, 0)
+		head_node.add_child(ear)
+
 	# Hat (if set)
 	if hat_color.a > 0:
 		var hat = MeshInstance3D.new()
@@ -89,6 +130,24 @@ func build():
 	torso.mesh = torso_m
 	torso.position = Vector3(0, 1.15, 0)
 	add_child(torso)
+
+	# Belt
+	var belt = MeshInstance3D.new()
+	var belt_m = BoxMesh.new()
+	belt_m.size = Vector3(0.42, 0.06, 0.24)
+	belt_m.material = create_material(Color(0.2, 0.15, 0.08))
+	belt.mesh = belt_m
+	belt.position = Vector3(0, 0.88, 0)
+	add_child(belt)
+
+	# Belt buckle
+	var buckle = MeshInstance3D.new()
+	var buckle_m = BoxMesh.new()
+	buckle_m.size = Vector3(0.06, 0.05, 0.02)
+	buckle_m.material = create_material(Color(0.8, 0.75, 0.5))
+	buckle.mesh = buckle_m
+	buckle.position = Vector3(0, 0.88, 0.13)
+	add_child(buckle)
 
 	# ARMS
 	arm_l = Node3D.new()

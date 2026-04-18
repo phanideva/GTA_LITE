@@ -1,18 +1,20 @@
 extends CharacterBody3D
-# Gangster/Enemy AI — humanoid thug with dark clothes and gun
+# Gangster/Enemy AI — gang members that only attack when provoked
 
 @export var speed = 10.0
-@export var detect_range = 60.0
+@export var detect_range = 15.0  # Only react when very close
+@export var aggro_range = 40.0   # Chase range once provoked
 @export var health = 75
 
 const GRAVITY = -20.0
 var is_dead = false
 var target: Node3D = null
 var shoot_cooldown = 0.0
-var has_alerted = false
+var is_provoked = false  # Only fight back when attacked or player enters territory
 var wander_dir = Vector3.ZERO
 var wander_timer = 0.0
 var char_model: Node3D
+var provoke_cooldown = 0.0  # Return to idle after losing player
 
 var GANG_SHIRTS = [
 	Color(0.7, 0.1, 0.1), Color(0.1, 0.1, 0.1), Color(0.5, 0.0, 0.5),
@@ -50,7 +52,7 @@ func _physics_process(delta):
 	else:
 		velocity.y = 0.0
 
-	update_target()
+	update_target(delta)
 	shoot_cooldown -= delta
 
 	var is_moving = false
@@ -78,28 +80,40 @@ func _physics_process(delta):
 
 	move_and_slide()
 
-func update_target():
+func update_target(delta):
 	var player = Globals.player
-	if player and player.global_position.distance_to(global_position) < detect_range:
-		if not has_alerted:
-			Globals.add_wanted_level(1)
-			has_alerted = true
-		target = player
-	else:
+	if not player:
 		target = null
+		return
+
+	var dist = player.global_position.distance_to(global_position)
+
+	# Only engage if provoked (took damage) or player is VERY close
+	if is_provoked:
+		if dist < aggro_range:
+			target = player
+			provoke_cooldown = 15.0
+		else:
+			provoke_cooldown -= delta
+			if provoke_cooldown <= 0:
+				is_provoked = false
+				target = null
+	else:
+		target = null  # Don't attack unprovoked
 
 func engage_target(_delta):
 	if not target:
 		return
 	var direction = (target.global_position - global_position).normalized()
-	if global_position.distance_to(target.global_position) > 5.0:
+	var dist = global_position.distance_to(target.global_position)
+	if dist > 5.0:
 		velocity.x = direction.x * speed
 		velocity.z = direction.z * speed
 	else:
 		velocity.x = move_toward(velocity.x, 0, speed)
 		velocity.z = move_toward(velocity.z, 0, speed)
 	rotation.y = atan2(direction.x, direction.z)
-	if shoot_cooldown <= 0 and global_position.distance_to(target.global_position) < 40.0:
+	if shoot_cooldown <= 0 and dist < 30.0:
 		shoot_at_target(direction)
 
 func shoot_at_target(direction: Vector3):
@@ -112,6 +126,15 @@ func shoot_at_target(direction: Vector3):
 
 func take_damage(amount: int):
 	health -= amount
+	is_provoked = true
+	provoke_cooldown = 20.0
+	# Player attacking gangsters raises wanted level slightly
+	Globals.add_wanted_level(1)
+	# Alert nearby gangsters
+	for g in get_tree().get_nodes_in_group("enemy"):
+		if g != self and g.global_position.distance_to(global_position) < 25.0:
+			g.is_provoked = true
+			g.provoke_cooldown = 15.0
 	if health <= 0:
 		die()
 

@@ -219,6 +219,11 @@ func handle_driving(delta):
 	var forward = -global_transform.basis.z
 	position += forward * current_speed * delta
 
+	# Engine sound pitch
+	var eng = get_node_or_null("EngineLoop")
+	if eng:
+		eng.pitch_scale = 0.8 + abs(current_speed) / max_speed * 1.0
+
 	if Input.is_action_just_pressed("interact"):
 		exit_vehicle()
 
@@ -229,17 +234,32 @@ func player_entered(p: Node3D):
 	p.is_in_vehicle = true
 	if p.model_root:
 		p.model_root.visible = false
+	# Engine sound (if not bicycle)
+	if not is_bicycle:
+		var eng = AudioStreamPlayer.new()
+		eng.name = "EngineLoop"
+		eng.bus = "Master"
+		eng.volume_db = -14.0
+		eng.stream = SFX.generate_engine_loop()
+		add_child(eng)
+		eng.play()
 
 func exit_vehicle():
 	if player:
 		player.is_in_vehicle = false
 		player.current_vehicle = null
-		player.global_position = global_position + Vector3(2, 1, 0)
+		var exit_dir = global_transform.basis.x.normalized()
+		player.global_position = global_position + exit_dir * 2.0 + Vector3(0, 1, 0)
 		if player.model_root:
 			player.model_root.visible = true
 		is_player_driving = false
 		player = null
-		rotation.z = 0  # Reset lean
+		rotation.z = 0
+		current_speed = 0.0
+		var eng = get_node_or_null("EngineLoop")
+		if eng:
+			eng.stop()
+			eng.queue_free()
 
 func take_damage(amount: int):
 	health -= amount

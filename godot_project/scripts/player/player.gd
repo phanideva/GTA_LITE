@@ -1,5 +1,6 @@
 extends CharacterBody3D
-# Player Controller — 3rd Person GTA 3D
+# Player Controller — 3rd Person GTA Style
+# Camera orbits independently; player model faces movement direction
 
 @export var walk_speed = 8.0
 @export var sprint_speed = 18.0
@@ -10,11 +11,17 @@ const GRAVITY = -20.0
 const BULLET_SCENE = preload("res://scenes/player/bullet.tscn")
 
 # State
-var health = 100
-var max_health = 100
+var health = 200
+var max_health = 200
+var armor = 0
+var max_armor = 100
 var is_sprinting = false
 var is_in_vehicle = false
 var current_vehicle: Node3D = null
+var is_dead = false
+var death_timer = 0.0
+var invincibility_timer = 0.0
+var footstep_timer = 0.0
 
 # Weapon system
 enum Weapon { MELEE, PISTOL, RIFLE, SHOTGUN }
@@ -24,20 +31,33 @@ var weapon_damage = { Weapon.PISTOL: 25, Weapon.RIFLE: 40, Weapon.SHOTGUN: 80 }
 var weapon_fire_rate = { Weapon.PISTOL: 0.3, Weapon.RIFLE: 0.1, Weapon.SHOTGUN: 0.7 }
 var fire_cooldown = 0.0
 
-# Camera — 3rd person
+# Camera — independent orbit (NOT attached to player rotation)
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var camera_arm: SpringArm3D = $CameraPivot/SpringArm3D
 @onready var camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
 
+# Camera angles (independent from player body)
+var cam_yaw = 0.0    # Horizontal orbit angle
+var cam_pitch = 0.0  # Vertical tilt
+
 # Character model
 var char_model: Node3D
 var model_root: Node3D
+var model_target_angle = 0.0  # Smoothly rotate model to face movement
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	Globals.player = self
 	add_to_group("player")
 	_build_player_model()
+	# Reparent camera pivot to scene root so it doesn't inherit player rotation
+	await get_tree().process_frame
+	var pivot = camera_pivot
+	var parent = get_parent()
+	if pivot and parent:
+		remove_child(pivot)
+		parent.add_child(pivot)
+		pivot.global_position = global_position + Vector3(0, 1.6, 0)
 
 func _build_player_model():
 	model_root = Node3D.new()
@@ -48,7 +68,7 @@ func _build_player_model():
 	char_model = Node3D.new()
 	char_model.set_script(CharModel)
 	char_model.skin_color = Color(0.85, 0.7, 0.55)
-	char_model.shirt_color = Color(0.1, 0.1, 0.1)  # Black jacket like GTA protagonist
+	char_model.shirt_color = Color(0.1, 0.1, 0.1)
 	char_model.pants_color = Color(0.15, 0.15, 0.2)
 	char_model.shoe_color = Color(0.2, 0.1, 0.05)
 	char_model.hair_color = Color(0.1, 0.07, 0.03)
@@ -58,21 +78,40 @@ func _build_player_model():
 
 func _input(event):
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		# Horizontal: rotate entire player body
-		rotate_y(-event.relative.x * mouse_sensitivity)
-		# Vertical: tilt camera pivot up/down
-		camera_pivot.rotate_x(-event.relative.y * mouse_sensitivity)
-		camera_pivot.rotation.x = clamp(camera_pivot.rotation.x, -PI / 4.0, PI / 3.0)
+		# Camera orbits freely — does NOT rotate CharacterBody3D
+		cam_yaw -= event.relative.x * mouse_sensitivity
+		cam_pitch -= event.relative.y * mouse_sensitivity
+		cam_pitch = clamp(cam_pitch, -PI / 4.0, PI / 3.0)
 
 func _physics_process(delta):
 	if Globals.game_state != "playing":
 		return
 
 	fire_cooldown -= delta
+	invincibility_timer -= delta
+
+	# Update camera orbit position (independent of body)
+	camera_pivot.global_position = global_position + Vector3(0, 1.6, 0)
+	camera_pivot.rotation = Vector3(cam_pitch, cam_yaw, 0)
+
+	# Handle death
+	if is_dead:
+		death_timer -= delta
+		velocity = Vector3.ZERO
+		move_and_slide()
+		if death_timer <= 0:
+			_respawn()
+		return
 
 	if is_in_vehicle:
+		if current_vehicle:
+			# Player position follows vehicle so camera tracks it
+			global_position = current_vehicle.global_position + Vector3(0, 0.5, 0)
 		if model_root:
 			model_root.visible = false
+		# Handle exit from inside vehicle
+		if Input.is_action_just_pressed("interact") and current_vehicle:
+			current_vehicle.exit_vehicle()
 		return
 	else:
 		if model_root:
@@ -106,22 +145,40 @@ func handle_movement(delta):
 
 	if is_moving:
 		input_dir = input_dir.normalized()
-		var forward = -global_transform.basis.z
-		var right   = global_transform.basis.x
-		var move_dir = (forward * -input_dir.y + right * input_dir.x)
-		move_dir.y = 0
-		move_dir = move_dir.normalized()
+		# Movement is relative to CAMERA direction (not body)
+		var cam_basis = camera_pivot.global_transform.basis
+		var forward = -cam_basis.z
+		forward.y = 0
+		forward = forward.normalized()
+		var right = cam_basis.x
+		right.y = 0
+		right = right.normalized()
+		var move_dir = (forward * -input_dir.y + right * input_dir.x).normalized()
+
 		velocity.x = move_dir.x * spd
 		velocity.z = move_dir.z * spd
-		# Animate walking
+
+		# Rotate model to face movement direction (GTA-style smooth turn)
+		model_target_angle = atan2(move_dir.x, move_dir.z)
+		if model_root:
+			model_root.rotation.y = lerp_angle(model_root.rotation.y, model_target_angle, delta * 12.0)
+
+		# Walk animation
 		if char_model:
 			var anim_speed = 8.0 if is_sprinting else 5.0
 			char_model.animate_walk(delta, anim_speed)
+		
+		# Footstep sounds
+		footstep_timer -= delta
+		if footstep_timer <= 0:
+			SFX.play_sfx("footstep", 0.2)
+			footstep_timer = 0.35 if is_sprinting else 0.5
 	else:
 		velocity.x = move_toward(velocity.x, 0, spd * 10 * delta)
 		velocity.z = move_toward(velocity.z, 0, spd * 10 * delta)
 		if char_model:
 			char_model.reset_pose()
+		footstep_timer = 0.0
 
 func handle_jump():
 	if Input.is_action_just_pressed("jump") and is_on_floor():
@@ -144,18 +201,30 @@ func handle_weapon_switch():
 
 func handle_interaction():
 	if Input.is_action_just_pressed("interact"):
-		var space_state = get_world_3d().direct_space_state
-		var query = PhysicsShapeQueryParameters3D.new()
-		var sphere = SphereShape3D.new()
-		sphere.radius = 4.0
-		query.shape = sphere
-		query.transform.origin = global_position
-		query.exclude = [get_rid()]
-		var results = space_state.intersect_shape(query)
-		for hit in results:
-			if hit.collider.is_in_group("vehicle"):
-				enter_vehicle(hit.collider)
-				return
+		if is_in_vehicle and current_vehicle:
+			current_vehicle.exit_vehicle()
+			return
+		# Distance-based vehicle detection — XZ distance (ignore Y height difference)
+		var closest_vehicle: Node3D = null
+		var closest_dist = 7.0
+		var p_xz = Vector2(global_position.x, global_position.z)
+		# Check parked vehicles and motorcycles
+		for v in get_tree().get_nodes_in_group("vehicle"):
+			var v_xz = Vector2(v.global_position.x, v.global_position.z)
+			var dist = p_xz.distance_to(v_xz)
+			if dist < closest_dist:
+				closest_dist = dist
+				closest_vehicle = v
+		# Check traffic cars (can be carjacked GTA-style!)
+		for v in get_tree().get_nodes_in_group("traffic"):
+			var v_xz = Vector2(v.global_position.x, v.global_position.z)
+			var dist = p_xz.distance_to(v_xz)
+			if dist < closest_dist:
+				closest_dist = dist
+				closest_vehicle = v
+		if closest_vehicle and closest_vehicle.has_method("player_entered"):
+			enter_vehicle(closest_vehicle)
+			SFX.play_sfx("pickup")
 
 func shoot():
 	if fire_cooldown > 0:
@@ -166,6 +235,13 @@ func shoot():
 		return
 	ammo[ammo_key] -= 1
 	fire_cooldown = weapon_fire_rate.get(current_weapon, 0.3)
+
+	# Snap model to face camera direction when shooting
+	if model_root:
+		var cam_fwd = -camera_pivot.global_transform.basis.z
+		cam_fwd.y = 0
+		if cam_fwd.length() > 0.01:
+			model_root.rotation.y = atan2(cam_fwd.x, cam_fwd.z)
 
 	var bullet = BULLET_SCENE.instantiate()
 	bullet.damage = weapon_damage.get(current_weapon, 25)
@@ -184,10 +260,19 @@ func shoot():
 			var spread = Vector3(randf_range(-0.1, 0.1), randf_range(-0.05, 0.05), 0)
 			pellet.launch(dir + spread, 80.0)
 		bullet.queue_free()
+		_muzzle_flash()
+		SFX.play_sfx("shotgun", 0.1)
 		return
 
 	bullet.launch(dir, 120.0)
 	_muzzle_flash()
+	# Play gunshot sound
+	if current_weapon == Weapon.PISTOL:
+		SFX.play_sfx("gunshot", 0.1)
+	elif current_weapon == Weapon.RIFLE:
+		SFX.play_sfx("gunshot", 0.2)
+	elif current_weapon == Weapon.SHOTGUN:
+		SFX.play_sfx("shotgun", 0.1)
 
 func _muzzle_flash():
 	var flash_pos = camera.global_position + (-camera.global_transform.basis.z * 1.2)
@@ -217,12 +302,14 @@ func _muzzle_flash():
 	get_tree().create_timer(0.05).timeout.connect(spark.queue_free)
 
 func melee_attack():
+	SFX.play_sfx("melee", 0.15)
 	var space_state = get_world_3d().direct_space_state
 	var query = PhysicsShapeQueryParameters3D.new()
 	var box = BoxShape3D.new()
 	box.size = Vector3(2, 2, 2)
 	query.shape = box
-	query.transform.origin = global_position + (-global_transform.basis.z * 2)
+	query.transform.origin = global_position + (-camera_pivot.global_transform.basis.z.normalized() * 2)
+	query.transform.origin.y = global_position.y
 	query.exclude = [get_rid()]
 	var results = space_state.intersect_shape(query)
 	for hit in results:
@@ -230,16 +317,56 @@ func melee_attack():
 			hit.collider.take_damage(35)
 
 func take_damage(amount: int):
+	if is_dead or invincibility_timer > 0:
+		return
+	# Armor absorbs damage first
+	if armor > 0:
+		var armor_absorb = min(armor, amount)
+		armor -= armor_absorb
+		amount -= armor_absorb
 	health -= amount
 	if health <= 0:
+		health = 0
 		die()
 
 func die():
-	health = 100
+	if is_dead:
+		return
+	is_dead = true
+	death_timer = 3.0  # Show WASTED for 3 seconds
 	Globals.player_money = max(0, Globals.player_money - 200)
-	global_position = Vector3(0, 2, 0)
 	Globals.wanted_level = 0
-	print("Wasted! Respawned at hospital. Lost $200.")
+	SFX.play_sfx("death")
+	# Notify HUD to show WASTED screen
+	for hud in get_tree().get_nodes_in_group("hud"):
+		if hud.has_method("show_wasted"):
+			hud.show_wasted()
+	print("WASTED!")
+
+func _respawn():
+	is_dead = false
+	health = max_health
+	armor = 0
+	invincibility_timer = 5.0  # 5 seconds of invincibility after respawn
+	# Respawn at nearest safe point (hospital locations near sidewalks)
+	var spawn_points = [
+		Vector3(22, 2, 22),
+		Vector3(55, 2, 55),
+		Vector3(-55, 2, -55),
+	]
+	var best = spawn_points[0]
+	var best_dist = 9999.0
+	for p in spawn_points:
+		var d = p.distance_to(global_position)
+		if d < best_dist:
+			best_dist = d
+			best = p
+	global_position = best
+	# Dismiss WASTED screen
+	for hud in get_tree().get_nodes_in_group("hud"):
+		if hud.has_method("hide_wasted"):
+			hud.hide_wasted()
+	print("Respawned at hospital. Lost $200.")
 
 func enter_vehicle(vehicle):
 	is_in_vehicle = true

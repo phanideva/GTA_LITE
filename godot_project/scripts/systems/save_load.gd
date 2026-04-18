@@ -20,6 +20,9 @@ func save_game() -> bool:
 			"wanted_level": Globals.wanted_level,
 			"kills": Globals.kills,
 			"missions_completed": Globals.missions_completed,
+		},
+		"story": {
+			"progress": _get_story_progress(),
 		}
 	}
 	
@@ -64,6 +67,10 @@ func load_game() -> bool:
 	Globals.kills = globals_data.get("kills", 0)
 	Globals.missions_completed = globals_data.get("missions_completed", 0)
 	
+	# Load story progress
+	var story_data = save_data.get("story", {})
+	_set_story_progress(story_data.get("progress", 0))
+	
 	print("Game loaded!")
 	return true
 
@@ -71,3 +78,14 @@ func delete_save():
 	var file = FileAccess.open(save_file_path, FileAccess.WRITE)
 	if file != null:
 		print("Save deleted!")
+
+func _get_story_progress() -> int:
+	var ms = get_tree().get_first_node_in_group("mission_system")
+	if ms and ms.get("story_progress") != null:
+		return ms.story_progress
+	return 0
+
+func _set_story_progress(progress: int):
+	var ms = get_tree().get_first_node_in_group("mission_system")
+	if ms and ms.get("story_progress") != null:
+		ms.story_progress = progress

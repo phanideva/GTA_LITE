@@ -154,6 +154,52 @@ func _build_car_model():
 		bumper.position = Vector3(0, 0.3, z_off)
 		add_child(bumper)
 
+	# Side mirrors
+	for side in [-1, 1]:
+		var mirror = MeshInstance3D.new()
+		var mm = BoxMesh.new()
+		mm.size = Vector3(0.12, 0.08, 0.1)
+		mm.material = _make_mat(car_color)
+		mirror.mesh = mm
+		mirror.position = Vector3(side * (body_w / 2.0 + 0.08), 1.0, 0.5)
+		add_child(mirror)
+
+	# Door handles
+	for side in [-1, 1]:
+		var handle = MeshInstance3D.new()
+		var hm = BoxMesh.new()
+		hm.size = Vector3(0.04, 0.03, 0.15)
+		hm.material = _make_mat(Color(0.7, 0.7, 0.7))
+		handle.mesh = hm
+		handle.position = Vector3(side * (body_w / 2.0 + 0.02), 0.75, 0.3)
+		add_child(handle)
+
+	# License plate (rear)
+	var plate = MeshInstance3D.new()
+	var plm = BoxMesh.new()
+	plm.size = Vector3(0.5, 0.15, 0.02)
+	var plate_mat = StandardMaterial3D.new()
+	plate_mat.albedo_color = Color(0.95, 0.95, 0.9)
+	plate_mat.roughness = 0.5
+	plm.material = plate_mat
+	plate.mesh = plm
+	plate.position = Vector3(0, 0.35, -(body_l / 2.0 + 0.03))
+	add_child(plate)
+
+	# Side windows (glass panels)
+	for side in [-1, 1]:
+		var swin = MeshInstance3D.new()
+		var swm = BoxMesh.new()
+		swm.size = Vector3(0.04, 0.4, body_l * 0.35)
+		var sglass = StandardMaterial3D.new()
+		sglass.albedo_color = Color(0.5, 0.65, 0.85, 0.35)
+		sglass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		sglass.roughness = 0.1
+		swm.material = sglass
+		swin.mesh = swm
+		swin.position = Vector3(side * (body_w / 2.0 - 0.08), 1.15, -0.1)
+		add_child(swin)
+
 func _physics_process(delta):
 	if is_player_driving and player:
 		handle_driving(delta)
@@ -168,9 +214,9 @@ func handle_driving(delta):
 	if Input.is_action_pressed("ui_down"):
 		input_dir.z += 1
 	if Input.is_action_pressed("ui_left"):
-		rotation.y += turn_speed * delta * (current_speed / max_speed)
+		rotation.y += turn_speed * delta * clamp(abs(current_speed) / max_speed, 0.15, 1.0)
 	if Input.is_action_pressed("ui_right"):
-		rotation.y -= turn_speed * delta * (current_speed / max_speed)
+		rotation.y -= turn_speed * delta * clamp(abs(current_speed) / max_speed, 0.15, 1.0)
 
 	if input_dir.z != 0:
 		current_speed = move_toward(current_speed, input_dir.z * max_speed, acceleration)
@@ -180,6 +226,11 @@ func handle_driving(delta):
 	var forward = -global_transform.basis.z
 	position += forward * current_speed * delta
 
+	# Engine sound pitch based on speed
+	var eng = get_node_or_null("EngineLoop")
+	if eng:
+		eng.pitch_scale = 0.8 + abs(current_speed) / max_speed * 0.8
+
 	if Input.is_action_just_pressed("interact"):
 		exit_vehicle()
 
@@ -187,21 +238,36 @@ func player_entered(p: Node3D):
 	player = p
 	is_player_driving = true
 	engine_running = true
-	p.global_position = global_position + Vector3(0, 2, 0)
+	p.global_position = global_position + Vector3(0, 1.5, 0)
 	p.is_in_vehicle = true
 	if p.model_root:
 		p.model_root.visible = false
+	# Start engine sound
+	var eng = AudioStreamPlayer.new()
+	eng.name = "EngineLoop"
+	eng.bus = "Master"
+	eng.volume_db = -14.0
+	eng.stream = SFX.generate_engine_loop()
+	add_child(eng)
+	eng.play()
 
 func exit_vehicle():
 	if player:
 		player.is_in_vehicle = false
 		player.current_vehicle = null
-		player.global_position = global_position + Vector3(3, 1, 0)
+		var exit_dir = global_transform.basis.x.normalized()
+		player.global_position = global_position + exit_dir * 3.0 + Vector3(0, 1, 0)
 		if player.model_root:
 			player.model_root.visible = true
 		is_player_driving = false
 		engine_running = false
 		player = null
+		current_speed = 0.0
+		# Stop engine sound
+		var eng = get_node_or_null("EngineLoop")
+		if eng:
+			eng.stop()
+			eng.queue_free()
 
 func take_damage(amount: int):
 	health -= amount

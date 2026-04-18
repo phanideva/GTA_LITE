@@ -4,6 +4,8 @@ extends CanvasLayer
 var health_label: Label
 var health_bar: ColorRect
 var health_bg: ColorRect
+var armor_bar: ColorRect
+var armor_bg: ColorRect
 var money_label: Label
 var wanted_label: Label
 var mission_label: Label
@@ -11,14 +13,17 @@ var fps_label: Label
 var ammo_label: Label
 var weapon_label: Label
 var time_label: Label
+var chapter_label: Label
 var death_overlay: ColorRect
 var death_label: Label
+var interact_label: Label
 var pause_panel: Control = null
 var is_paused = false
 
 const WEAPON_NAMES = {0: "FISTS", 1: "PISTOL", 2: "RIFLE", 3: "SHOTGUN"}
 
 func _ready():
+	add_to_group("hud")
 	# Dark semi-transparent bar at top
 	var top_bar = ColorRect.new()
 	top_bar.color = Color(0.0, 0.0, 0.0, 0.35)
@@ -41,9 +46,24 @@ func _ready():
 	add_child(health_bar)
 
 	health_label = _make_label("", Vector2(25, 10), 18, Color.WHITE)
+	
+	# Armor bar (below health)
+	armor_bg = ColorRect.new()
+	armor_bg.color = Color(0.0, 0.0, 0.2, 0.6)
+	armor_bg.position = Vector2(20, 38)
+	armor_bg.size = Vector2(200, 12)
+	add_child(armor_bg)
+	
+	armor_bar = ColorRect.new()
+	armor_bar.color = Color(0.3, 0.5, 1.0)
+	armor_bar.position = Vector2(20, 38)
+	armor_bar.size = Vector2(0, 12)
+	add_child(armor_bar)
+	
 	money_label  = _make_label("", Vector2(240, 10), 20, Color(0.2, 1.0, 0.2))
 	wanted_label = _make_label("", Vector2(1550, 10), 22, Color(1.0, 0.85, 0.0))
 	mission_label = _make_label("", Vector2(20, 920), 18, Color(1.0, 1.0, 0.6))
+	chapter_label = _make_label("", Vector2(20, 950), 14, Color(0.6, 0.6, 0.7))
 	fps_label    = _make_label("", Vector2(1800, 10), 14, Color(0.5, 0.5, 0.5))
 	time_label   = _make_label("", Vector2(880, 10), 20, Color(0.9, 0.9, 1.0))
 
@@ -66,6 +86,12 @@ func _ready():
 
 	death_label = _make_label("WASTED", Vector2(780, 480), 80, Color(0.9, 0.1, 0.1))
 	death_label.visible = false
+
+	# Vehicle interaction prompt (center bottom)
+	interact_label = _make_label("", Vector2(800, 850), 22, Color(1.0, 1.0, 0.7))
+	interact_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	interact_label.size = Vector2(320, 30)
+	interact_label.visible = false
 
 	# Crosshair
 	var crosshair_v = ColorRect.new()
@@ -98,6 +124,15 @@ func _process(_delta):
 	health_bar.size.x = 200.0 * hp_ratio
 	health_bar.color = Color(0.8, 0.15, 0.15) if hp_ratio > 0.3 else Color(1.0, 0.1, 0.1)
 	health_label.text = "%d" % player.health
+
+	# Armor bar
+	if player.get("armor") != null and player.armor > 0:
+		armor_bar.size.x = 200.0 * (float(player.armor) / float(player.max_armor))
+		armor_bg.visible = true
+		armor_bar.visible = true
+	else:
+		armor_bg.visible = false
+		armor_bar.visible = false
 
 	# Money
 	money_label.text = "$ %d" % Globals.player_money
@@ -132,11 +167,46 @@ func _process(_delta):
 		time_label.text = "%02d:%02d %s" % [h12, m, suffix]
 
 	# Death
-	var is_dead = player.health <= 0
-	death_overlay.visible = is_dead
-	death_label.visible = is_dead
-	if is_dead:
+	if player.is_dead:
+		death_overlay.visible = true
+		death_label.visible = true
 		death_overlay.color.a = 0.55
+	else:
+		death_overlay.visible = false
+		death_label.visible = false
+	
+	# Vehicle proximity prompt
+	if player and not player.is_in_vehicle and not player.is_dead:
+		var near_vehicle = false
+		var p_xz = Vector2(player.global_position.x, player.global_position.z)
+		for v in get_tree().get_nodes_in_group("vehicle"):
+			var v_xz = Vector2(v.global_position.x, v.global_position.z)
+			if p_xz.distance_to(v_xz) < 7.0:
+				near_vehicle = true
+				break
+		if not near_vehicle:
+			for v in get_tree().get_nodes_in_group("traffic"):
+				var v_xz = Vector2(v.global_position.x, v.global_position.z)
+				if p_xz.distance_to(v_xz) < 7.0:
+					near_vehicle = true
+					break
+		interact_label.visible = near_vehicle
+		interact_label.text = "Press E to enter vehicle" if near_vehicle else ""
+	elif player and player.is_in_vehicle:
+		interact_label.visible = true
+		if player.current_vehicle and player.current_vehicle.get("current_speed") != null:
+			var spd = abs(player.current_vehicle.current_speed)
+			var mph = int(spd * 2.2)
+			interact_label.text = "%d MPH  |  Press E to exit" % mph
+		else:
+			interact_label.text = "Press E to exit vehicle"
+	else:
+		interact_label.visible = false
+
+	# Chapter progress
+	var ms = get_tree().get_first_node_in_group("mission_system")
+	if ms and ms.has_method("get_story_progress_text"):
+		chapter_label.text = ms.get_story_progress_text()
 
 func _input(event):
 	if event.is_action_pressed("ui_cancel"):
@@ -228,3 +298,12 @@ func _on_quit():
 
 func update_mission(text: String):
 	mission_label.text = "MISSION: " + text
+
+func show_wasted():
+	death_overlay.visible = true
+	death_label.visible = true
+	death_overlay.color.a = 0.55
+
+func hide_wasted():
+	death_overlay.visible = false
+	death_label.visible = false

@@ -14,16 +14,18 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="GTA Advanced 3D"
-config/description="Advanced 3D Single-Player GTA-Style Game"
+config/name="Gangster Town Adventures"
+config/description="Open-world 3D action-adventure game with story missions, gang warfare, and vehicle combat."
 config/version="1.0.0"
-run/main_scene="res://scenes/main/main.tscn"
+run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://icon.svg"
 
 [autoload]
 
 Globals="*res://scripts/globals.gd"
 Settings="*res://scripts/systems/settings.gd"
+SFX="*res://scripts/systems/sfx_manager.gd"
 
 [display]
 
