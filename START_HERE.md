@@ -9,22 +9,26 @@ A **complete, professional 3D game** using **Godot 4.x** ready to play, modify, 
 ## 🚀 Quick Start (60 Seconds)
 
 ### 1. **Download Godot 4.x**
+
 - Go to: https://godotengine.org/download
 - Download version 4.x for your OS
 - Install/Extract
 
 ### 2. **Open Game Project**
+
 - Run Godot
-- Click "Open Project"  
-- Navigate to: `d:\GTA_LITE\godot_project\`
+- Click "Open Project"
+- Navigate to: `d:\GTA_LITE\GangsterTownAdventures\`
 - Click "Open"
 
 ### 3. **Play Game**
+
 - Wait for project to load (30-60 seconds first time)
 - Press **F5** or click **Play** button
 - Game opens and you can play!
 
 ### 4. **Enjoy!**
+
 - Use **WASD** to move
 - **Mouse** to look
 - **E** to interact with vehicles
@@ -37,21 +41,27 @@ A **complete, professional 3D game** using **Godot 4.x** ready to play, modify, 
 ## 📖 Which Document to Read?
 
 ### "I want to PLAY the game"
+
 👉 Read: [SETUP_AND_RUN.md](SETUP_AND_RUN.md) (8 pages)
 
 ### "I want to understand the PROJECT"
+
 👉 Read: [README_COMPLETE.md](README_COMPLETE.md) (12 pages)
 
 ### "I want to DEVELOP/MODIFY the game"
+
 👉 Read: [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) (8 pages)
 
 ### "I want to ADD FREE ASSETS"
+
 👉 Read: [FREE_ASSETS_GUIDE.md](FREE_ASSETS_GUIDE.md) (12 pages)
 
 ### "I need to TEST the game"
+
 👉 Read: [TESTING_GUIDE.md](TESTING_GUIDE.md) (10 pages)
 
 ### "I want EVERYTHING explained"
+
 👉 Read: [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) (5 pages)
 
 ---
@@ -71,11 +81,11 @@ d:\GTA_LITE\
 └── IMPLEMENTATION_COMPLETE.md
 
 🎮 Godot Game Project
-└── godot_project/
-    ├── project.godot (config)
-    ├── scenes/ (game scenes)
-    ├── scripts/ (game code)
-    └── assets/ (ready for 3D models/audio)
+└── GangsterTownAdventures/
+   ├── project.godot (config)
+   ├── scenes/ (game scenes)
+   ├── scripts/ (game code)
+   └── assets/ (ready for 3D models/audio)
 
 📦 Old Archive (previous version)
 ├── scripts/ (old Python code)
@@ -84,14 +94,14 @@ d:\GTA_LITE\
 
 ---
 
-## ✅ Verification Checklist
+### Verification Checklist
 
 **All of these should be true:**
 
-- [ ] Folder `d:\GTA_LITE\godot_project\` exists
-- [ ] File `d:\GTA_LITE\godot_project\project.godot` exists
-- [ ] Folder `d:\GTA_LITE\godot_project\scripts\` has 17 .gd files
-- [ ] Folder `d:\GTA_LITE\godot_project\scenes\` has 8 .tscn files
+- [ ] Folder `d:\GTA_LITE\GangsterTownAdventures\` exists
+- [ ] File `d:\GTA_LITE\GangsterTownAdventures\project.godot` exists
+- [ ] Folder `d:\GTA_LITE\GangsterTownAdventures\scripts\` has the expected .gd files
+- [ ] Folder `d:\GTA_LITE\GangsterTownAdventures\scenes\` has the expected .tscn files
 - [ ] Godot 4.x installed on your computer
 - [ ] Game launches with F5 in Godot editor
 - [ ] You can move player with WASD
@@ -104,24 +114,27 @@ If all are TRUE: ✅ **Installation successful!**
 ## 🎮 Game Features at a Glance
 
 ### What You Can Do
+
 ✅ **Explore** a 3D open world  
 ✅ **Drive** vehicles  
 ✅ **Fight** enemies and police  
 ✅ **Complete** missions for money  
 ✅ **Earn** money and buy items  
 ✅ **Save/Load** your progress  
-✅ **Customize** player appearance  
+✅ **Customize** player appearance
 
 ### What's in the World
+
 ✅ Procedural terrain (grass)  
 ✅ Buildings and streets  
 ✅ Traffic vehicles (AI)  
 ✅ Pedestrians (wandering)  
 ✅ Police (chasing bad guys)  
 ✅ Gangsters (hostile)  
-✅ Shops and economy  
+✅ Shops and economy
 
 ### What Systems Work
+
 ✅ Player controller  
 ✅ Vehicle driving  
 ✅ AI (4 types)  
@@ -129,13 +142,14 @@ If all are TRUE: ✅ **Installation successful!**
 ✅ Combat (shooting, melee)  
 ✅ Save/Load  
 ✅ HUD display  
-✅ Minimap  
+✅ Minimap
 
 ---
 
 ## 🎯 Your Next Steps
 
 ### Option A: Just Play
+
 1. Read [SETUP_AND_RUN.md](SETUP_AND_RUN.md)
 2. Install Godot
 3. Open project
@@ -143,13 +157,15 @@ If all are TRUE: ✅ **Installation successful!**
 5. Have fun! 🎮
 
 ### Option B: Add Cool Assets
+
 1. Read [FREE_ASSETS_GUIDE.md](FREE_ASSETS_GUIDE.md)
 2. Download free 3D models from Sketchfab
-3. Place in `godot_project/assets/models/`
+3. Place in `GangsterTownAdventures/assets/models/`
 4. Import into game scenes
 5. See awesome 3D graphics! 🎨
 
 ### Option C: Extend the Game
+
 1. Read [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)
 2. Pick a feature to add
 3. Create new script in `scripts/`
@@ -157,6 +173,7 @@ If all are TRUE: ✅ **Installation successful!**
 5. Create something amazing! 🚀
 
 ### Option D: Understand Everything
+
 1. Read [README_COMPLETE.md](README_COMPLETE.md)
 2. Explore the codebase
 3. Study the architecture
@@ -168,6 +185,7 @@ If all are TRUE: ✅ **Installation successful!**
 ## 📊 What's Included
 
 ### ✅ Ready Right Now
+
 - Complete working game
 - All source code (GDScript)
 - 8 scene files
@@ -180,6 +198,7 @@ If all are TRUE: ✅ **Installation successful!**
 - UI/HUD
 
 ### 🎯 Ready to Add
+
 - Free 3D models (any from recommended sources)
 - Textures and materials
 - Sound effects and music
@@ -192,41 +211,45 @@ If all are TRUE: ✅ **Installation successful!**
 
 ## 🎮 Controls Quick Reference
 
-| Key | Action |
-|-----|--------|
-| **W** | Move forward |
-| **A** | Move left |
-| **S** | Move backward |
-| **D** | Move right |
-| **Space** | Jump |
-| **Shift** | Sprint (faster) |
-| **Mouse** | Look around |
-| **E** | Enter vehicle / Interact |
-| **F** | Melee attack (punch) |
-| **Click** | Shoot gun |
-| **Esc** | Pause game |
-| **Ctrl+S** | Save game |
-| **Ctrl+L** | Load game |
+| Key        | Action                   |
+| ---------- | ------------------------ |
+| **W**      | Move forward             |
+| **A**      | Move left                |
+| **S**      | Move backward            |
+| **D**      | Move right               |
+| **Space**  | Jump                     |
+| **Shift**  | Sprint (faster)          |
+| **Mouse**  | Look around              |
+| **E**      | Enter vehicle / Interact |
+| **F**      | Melee attack (punch)     |
+| **Click**  | Shoot gun                |
+| **Esc**    | Pause game               |
+| **Ctrl+S** | Save game                |
+| **Ctrl+L** | Load game                |
 
 ---
 
 ## 🐛 Troubleshooting
 
 ### Game Won't Start?
+
 1. Check Godot 4.x is installed
 2. Verify folder path is correct
 3. See "Troubleshooting" in [SETUP_AND_RUN.md](SETUP_AND_RUN.md)
 
 ### Player Won't Move?
+
 1. Check input setup
 2. See "Common Issues" in [TESTING_GUIDE.md](TESTING_GUIDE.md)
 
 ### Missing Graphics?
+
 1. Update GPU drivers
 2. Try lower resolution
 3. See "Graphics Issues" in [TESTING_GUIDE.md](TESTING_GUIDE.md)
 
 ### Want More Help?
+
 Read the relevant documentation file for your issue!
 
 ---
@@ -234,16 +257,19 @@ Read the relevant documentation file for your issue!
 ## 💡 Helpful Resources
 
 ### Official Godot
+
 - Website: https://godotengine.org/
 - Docs: https://docs.godotengine.org/
 - Community: https://forum.godotengine.org/
 
 ### Free 3D Assets
+
 - Sketchfab: https://sketchfab.com/
 - OpenGameArt: https://opengameart.org/
 - Kenney.nl: https://kenney.nl/
 
 ### Learning
+
 - YouTube: GDQuest, Brackeys
 - Articles: Gamasutra, Medium
 - Books: "Game Engine Architecture"
@@ -253,6 +279,7 @@ Read the relevant documentation file for your issue!
 ## 🎯 Project Goals
 
 ### ✅ Achieved
+
 - Complete 3D game working
 - Professional architecture
 - Multiple AI systems
@@ -263,6 +290,7 @@ Read the relevant documentation file for your issue!
 - Ready to play
 
 ### 🚀 Next Phase (To Implement)
+
 - Advanced weather
 - Day/night cycle
 - More missions
@@ -276,29 +304,29 @@ See [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) for details.
 
 ## 📈 Specifications
 
-| Aspect | Specification |
-|--------|---------------|
-| **Engine** | Godot 4.x |
-| **Language** | GDScript |
-| **Type** | 3D, Single-player, Action |
-| **Performance** | 60+ FPS |
-| **Memory** | 800MB - 1.5GB |
-| **World Size** | 500x500 units (expandable) |
-| **Platform** | Windows, Linux, Mac |
+| Aspect          | Specification              |
+| --------------- | -------------------------- |
+| **Engine**      | Godot 4.x                  |
+| **Language**    | GDScript                   |
+| **Type**        | 3D, Single-player, Action  |
+| **Performance** | 60+ FPS                    |
+| **Memory**      | 800MB - 1.5GB              |
+| **World Size**  | 500x500 units (expandable) |
+| **Platform**    | Windows, Linux, Mac        |
 
 ---
 
 ## 📝 Version Info
 
-| Item | Value |
-|------|-------|
-| **Project** | GTA Advanced 3D |
-| **Version** | 1.0.0 |
-| **Status** | ✅ Complete & Ready |
-| **Date** | April 18, 2026 |
-| **Godot** | 4.x (4.0+) |
-| **Code** | 2,700+ lines of GDScript |
-| **Docs** | 60+ pages |
+| Item        | Value                    |
+| ----------- | ------------------------ |
+| **Project** | GTA Advanced 3D          |
+| **Version** | 1.0.0                    |
+| **Status**  | ✅ Complete & Ready      |
+| **Date**    | April 18, 2026           |
+| **Godot**   | 4.x (4.0+)               |
+| **Code**    | 2,700+ lines of GDScript |
+| **Docs**    | 60+ pages                |
 
 ---
 
@@ -307,12 +335,13 @@ See [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) for details.
 Everything is ready to go:
 
 1. ✅ Game is complete and playable
-2. ✅ Documentation is comprehensive  
+2. ✅ Documentation is comprehensive
 3. ✅ Asset pipeline is configured
 4. ✅ Performance is optimized
 5. ✅ Code is professional quality
 
 **Now what?**
+
 - 🎮 **Play the game** → [SETUP_AND_RUN.md](SETUP_AND_RUN.md)
 - 🎨 **Add awesome assets** → [FREE_ASSETS_GUIDE.md](FREE_ASSETS_GUIDE.md)
 - 🔧 **Extend the game** → [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)
@@ -323,12 +352,14 @@ Everything is ready to go:
 ## 🙌 Final Notes
 
 ### This is NOT
+
 ❌ A 2D game (it's full 3D!)
 ❌ A Python project (it's Godot/GDScript!)
 ❌ Incomplete (it's fully functional!)
 ❌ Hard to understand (docs are comprehensive!)
 
 ### This IS
+
 ✅ A complete 3D game engine
 ✅ Production-ready code
 ✅ Fully documented
@@ -359,6 +390,7 @@ Everything is ready to go:
 ## ✨ Congratulations!
 
 You now have:
+
 - ✅ A complete 3D game
 - ✅ Full source code
 - ✅ Comprehensive documentation
@@ -370,11 +402,11 @@ You now have:
 
 **Questions?** See the documentation files.  
 **Found a bug?** See [TESTING_GUIDE.md](TESTING_GUIDE.md).  
-**Want to contribute?** See [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md).  
+**Want to contribute?** See [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md).
 
 ---
 
 **GTA Advanced 3D v1.0.0 - Ready to Play! 🎉**
 
-*Last Updated: April 18, 2026*  
-*Status: ✅ COMPLETE*
+_Last Updated: April 18, 2026_  
+_Status: ✅ COMPLETE_

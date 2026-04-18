@@ -1,9 +1,11 @@
 # GTA Advanced 3D - Complete Restructuring Guide
 
 ## Project Overview
-This is a completely restructured 3D GTA-style game using **Godot 4.x** with GDScript. 
+
+This is a completely restructured 3D GTA-style game using **Godot 4.x** with GDScript.
 
 **Key Features:**
+
 - ✅ 3D open-world gameplay (single-player only)
 - ✅ Advanced AI systems (pedestrians, police, gangsters, traffic)
 - ✅ Mission system with rewards
@@ -19,7 +21,7 @@ This is a completely restructured 3D GTA-style game using **Godot 4.x** with GDS
 ## Project Structure
 
 ```
-godot_project/
+GangsterTownAdventures/
 ├── project.godot              # Godot project configuration
 ├── assets/                    # All game assets
 │   ├── models/               # 3D models
@@ -44,6 +46,7 @@ godot_project/
 ## Core Systems
 
 ### 1. Player Controller (`scripts/player/player.gd`)
+
 - **Features:**
   - WASD movement, Shift sprint
   - Camera control with mouse
@@ -51,7 +54,6 @@ godot_project/
   - Gun and melee combat
   - Vehicle entry/exit
   - Damage and death system
-  
 - **Controls:**
   ```
   W/A/S/D  - Move
@@ -64,34 +66,40 @@ godot_project/
   ```
 
 ### 2. Vehicle System (`scripts/vehicles/vehicle.gd`)
+
 - Realistic driving mechanics
 - Player entry/exit system
 - Speed and acceleration
 - Direction control
 
 ### 3. AI Systems
+
 - **Pedestrians** (`scripts/ai/pedestrian.gd`): Wander around, can be killed
 - **Police** (`scripts/ai/police.gd`): Patrol, detect player, arrest when wanted
 - **Gangsters** (`scripts/ai/gangster.gd`): Hostile, shoot at player, increase wanted level
 - **Traffic** (`scripts/ai/traffic.gd`): Patrol routes, automated vehicles
 
 ### 4. Mission System (`scripts/systems/mission_system.gd`)
+
 - 5 pre-built missions
 - Mission tracking and rewards
 - Objective completion
 
 ### 5. Economy System (`scripts/systems/economy.gd`)
+
 - Money management
 - Bank deposits/withdrawals
 - Shopping system
 - Inventory tracking
 
 ### 6. Save/Load System (`scripts/systems/save_load.gd`)
+
 - Save game state to JSON
 - Load game progress
 - Player data persistence
 
 ### 7. UI Systems
+
 - **HUD** (`scripts/ui/hud.gd`): Health, money, wanted level, mission info
 - **Minimap** (`scripts/ui/minimap.gd`): Top-down player view
 - **Main Menu** (`scripts/ui/main_menu.gd`): Start, Load, Settings, Quit
@@ -101,6 +109,7 @@ godot_project/
 ## How to Setup and Run
 
 ### Prerequisites
+
 - **Godot 4.x** (Download from https://godotengine.org/)
 - Windows/Linux/Mac
 
@@ -113,7 +122,7 @@ godot_project/
 2. **Open Project in Godot**
    - Launch Godot
    - Click "Open Project"
-   - Navigate to `d:\GTA_LITE\godot_project\`
+   - Navigate to `d:\GTA_LITE\GangsterTownAdventures\`
    - Click "Open"
 
 3. **Run the Game**
@@ -127,17 +136,20 @@ godot_project/
 ### Recommended Free Asset Sources
 
 #### 3D Models
+
 - **Sketchfab** (sketchfab.com) - Free 3D models (CC0/CC-BY)
 - **OpenGameArt** (opengameart.org) - Game-ready models
 - **Kenney.nl** - Stylized game assets
 - **TurboSquid Free** - Professional models
 
 #### Textures
+
 - **Poly Haven** (polyhaven.com) - Free PBR textures
 - **OpenGameArt** - Seamless textures
 - **Textures.com** - Free tier
 
 #### Audio
+
 - **Freesound.org** - Sound effects
 - **OpenGameArt** - Game music and SFX
 - **Incompetech** - Free music
@@ -188,6 +200,7 @@ func _physics_process(delta):
 ```
 
 Then add to main scene with:
+
 ```gdscript
 var zombie_scene = preload("res://scenes/ai/zombie.tscn")
 var zombie = zombie_scene.instantiate()
@@ -211,15 +224,19 @@ add_child(zombie)
 ### Common Issues
 
 **Issue:** Player falls through ground
+
 - Solution: Ensure ground has `StaticBody3D` with collision
 
 **Issue:** NPCs not spawning
+
 - Solution: Check preload paths in `main.gd`
 
 **Issue:** Camera not moving
+
 - Solution: Verify mouse input is captured and camera is current
 
 ### Debug Commands
+
 - `Ctrl+D` - Toggle debug overlay
 - `F1` - Help menu
 
@@ -249,6 +266,7 @@ add_child(zombie)
 ## License & Attribution
 
 All code is original. Assets used will be:
+
 - Creative Commons (CC0, CC-BY)
 - Open Game Art compatible licenses
 - Free-to-use commercial licenses

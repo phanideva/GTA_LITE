@@ -2,9 +2,10 @@
 
 ## 🎮 Project Overview
 
-**GTA Advanced 3D** is a complete restructuring and rebuild of the original 2D Pygame-based GTA_LITE project into a **full-featured 3D single-player game** using **Godot 4.x**.
+**GTA Advanced 3D** is a complete restructuring and rebuild of the original 2D Pygame-based GTA_LITE project into a **full-featured 3D single-player game** using **Godot 4.6.2** (GDScript 2.0).
 
 ### Key Highlights
+
 ✅ **Advanced 3D Gameplay** - Full 3D open-world environment
 ✅ **Complex AI Systems** - Pedestrians, police, gangsters, traffic
 ✅ **Deep Mission System** - Multi-objective, branching missions
@@ -21,7 +22,7 @@
 ```
 d:\GTA_LITE\
 │
-├── godot_project/                    ← MAIN GAME PROJECT
+├── GangsterTownAdventures/                    ← MAIN GAME PROJECT
 │   ├── project.godot                 ← Godot project config
 │   ├── assets/                       ← Game assets
 │   │   ├── models/                   ← 3D models (.glb, .fbx, etc.)
@@ -76,23 +77,27 @@ d:\GTA_LITE\
 ## 🚀 Quick Start (5 Minutes)
 
 ### 1. Install Godot 4.x
+
 ```
 Download: https://godotengine.org/download
 Version: 4.x (Latest stable)
 ```
 
 ### 2. Open Project
+
 ```
-Launch Godot → Open Project → Select: d:\GTA_LITE\godot_project\
+Launch Godot → Open Project → Select: d:\GTA_LITE\GangsterTownAdventures\
 ```
 
 ### 3. Run Game
+
 ```
 Press F5 or Click Play button
 Game launches with 3D world!
 ```
 
 ### 4. Play
+
 ```
 Use WASD to move, mouse to look, E to enter vehicles, F to punch, LMB to shoot
 Press Escape to pause
@@ -100,28 +105,37 @@ Press Escape to pause
 
 **Full guide:** See [SETUP_AND_RUN.md](SETUP_AND_RUN.md)
 
+## 🛠️ Technologies Used
+
+- **Godot Engine:** 4.6.2 (GDScript 2.0)
+- **Rendering:** OpenGL Compatibility (OpenGL 3.3+)
+- **Physics:** Godot Physics 3D
+- **Build:** Godot Export Templates (Windows Desktop)
+- **Tools:** Git, PowerShell (Windows)
+
 ---
 
 ## 🎮 Game Controls
 
-| Input | Action |
-|-------|--------|
-| **W/A/S/D** | Move forward/left/back/right |
-| **Space** | Jump |
-| **Shift** | Sprint (increases speed) |
-| **Mouse** | Look around (first-person style) |
-| **E** | Interact/Enter vehicle |
-| **F** | Melee attack (punch) |
-| **Left Click** | Shoot |
-| **Esc** | Pause game |
-| **Ctrl+S** | Save game |
-| **Ctrl+L** | Load game |
+| Input          | Action                           |
+| -------------- | -------------------------------- |
+| **W/A/S/D**    | Move forward/left/back/right     |
+| **Space**      | Jump                             |
+| **Shift**      | Sprint (increases speed)         |
+| **Mouse**      | Look around (first-person style) |
+| **E**          | Interact/Enter vehicle           |
+| **F**          | Melee attack (punch)             |
+| **Left Click** | Shoot                            |
+| **Esc**        | Pause game                       |
+| **Ctrl+S**     | Save game                        |
+| **Ctrl+L**     | Load game                        |
 
 ---
 
 ## 🏗️ Core Systems
 
 ### 1. Player Controller
+
 **File:** `scripts/player/player.gd`
 
 - 3D character movement (WASD)
@@ -133,6 +147,7 @@ Press Escape to pause
 - Money tracking
 
 ### 2. Vehicle System
+
 **File:** `scripts/vehicles/vehicle.gd`
 
 - Vehicle entering/exiting
@@ -144,33 +159,42 @@ Press Escape to pause
 ### 3. AI Systems
 
 #### Pedestrians
+
 **File:** `scripts/ai/pedestrian.gd`
+
 - Wander around randomly
 - Collision-aware movement
 - Take damage and die
 - Reward player for eliminations
 
 #### Police
+
 **File:** `scripts/ai/police.gd`
+
 - Patrol assigned areas
 - Detect player when wanted
 - Chase and arrest player
 - Reduce wanted level on arrest
 
 #### Gangsters
+
 **File:** `scripts/ai/gangster.gd`
+
 - Hostile to player
 - Attack and shoot at player
 - Increase wanted level
 - Reward for elimination
 
 #### Traffic
+
 **File:** `scripts/ai/traffic.gd`
+
 - Follow waypoint paths
 - Automated driving
 - Patrol routes
 
 ### 4. Mission System
+
 **File:** `scripts/systems/mission_system.gd`
 
 - 5+ pre-built missions
@@ -180,6 +204,7 @@ Press Escape to pause
 - Progression tracking
 
 **Available Missions:**
+
 1. **Steal the Car** - Steal and park vehicle ($500)
 2. **Eliminate Gangsters** - Kill all gangsters ($1000)
 3. **Bank Robbery** - Steal from bank ($2000)
@@ -187,6 +212,7 @@ Press Escape to pause
 5. **Street Race** - Win race against 3 opponents ($600)
 
 ### 5. Economy System
+
 **File:** `scripts/systems/economy.gd`
 
 - Player money management
@@ -196,11 +222,13 @@ Press Escape to pause
 - Net worth calculation
 
 **Shops:**
+
 - Weapons: Pistol, Rifle, Shotgun
 - Clothing: Outfits (black suit, sports, casual)
 - Tuning: Nitro, engine upgrades, paint
 
 ### 6. Save/Load System
+
 **File:** `scripts/systems/save_load.gd`
 
 - Save to JSON files
@@ -211,7 +239,9 @@ Press Escape to pause
 ### 7. UI Systems
 
 #### HUD
+
 **File:** `scripts/ui/hud.gd`
+
 - Real-time health display
 - Money counter
 - Wanted level (★ stars)
@@ -219,7 +249,9 @@ Press Escape to pause
 - FPS counter
 
 #### Minimap
+
 **File:** `scripts/ui/minimap.gd`
+
 - Top-down world view
 - Player position (blue)
 - NPC positions (gray)
@@ -227,7 +259,9 @@ Press Escape to pause
 - Enemies (orange)
 
 #### Main Menu
+
 **File:** `scripts/ui/main_menu.gd`
+
 - Start new game
 - Load previous game
 - Settings menu
@@ -238,6 +272,7 @@ Press Escape to pause
 ## 🎯 Game Loop & Flow
 
 ### Startup
+
 ```
 1. Godot loads project.godot config
 2. Main scene (main.tscn) loads
@@ -250,6 +285,7 @@ Press Escape to pause
 ```
 
 ### Each Frame
+
 ```
 1. Player input processed (movement, combat, interaction)
 2. Player physics updated (gravity, collision)
@@ -261,6 +297,7 @@ Press Escape to pause
 ```
 
 ### Mission Flow
+
 ```
 1. Player presses action to start mission
 2. Mission objective displayed in HUD
@@ -277,6 +314,7 @@ Press Escape to pause
 The game is built to easily integrate free 3D assets. Currently uses placeholder geometry; replace with real assets.
 
 ### Recommended Sources
+
 - **Sketchfab** (sketchfab.com) - High-quality models
 - **OpenGameArt** (opengameart.org) - Game-ready assets
 - **Kenney.nl** - Consistent stylized assets
@@ -285,7 +323,7 @@ The game is built to easily integrate free 3D assets. Currently uses placeholder
 ### How to Add Assets
 
 1. Download `.glb` or `.fbx` model
-2. Place in `godot_project/assets/models/`
+2. Place in `GangsterTownAdventures/assets/models/`
 3. Use in scenes:
    ```gdscript
    var model = preload("res://assets/models/car.glb")
@@ -300,6 +338,7 @@ The game is built to easily integrate free 3D assets. Currently uses placeholder
 ### Modifying Game Values
 
 **Edit** `scripts/systems/settings.gd`:
+
 ```gdscript
 const PLAYER_SPEED = 15.0          # Increase for faster player
 const VEHICLE_MAX_SPEED = 50.0     # Faster vehicles
@@ -310,6 +349,7 @@ const WORLD_SIZE = Vector3(500, 100, 500)  # Bigger world
 ### Adding More NPCs
 
 **Edit** `scripts/main.gd`:
+
 ```gdscript
 func spawn_npcs():
     for i in range(10):  # Change 5 to 10 for more NPCs
@@ -321,6 +361,7 @@ func spawn_npcs():
 ### Creating New Missions
 
 **Edit** `scripts/systems/mission_system.gd`:
+
 ```gdscript
 var missions = [
     {
@@ -336,6 +377,7 @@ var missions = [
 ### Extending the World
 
 **Edit** `scripts/world/environment.gd`:
+
 - Modify `create_buildings()` to add more structures
 - Modify `create_terrain()` for different ground types
 - Add new zones with `create_district()`
@@ -345,6 +387,7 @@ var missions = [
 ## 🎨 Visual Customization
 
 ### Player Appearance
+
 **File:** `scripts/player/player.gd` → `_ready()` function
 
 ```gdscript
@@ -354,6 +397,7 @@ player_material.albedo_color = Color.BLUE
 ```
 
 ### World Colors
+
 **File:** `scripts/world/environment.gd`
 
 ```gdscript
@@ -365,6 +409,7 @@ material.albedo_color = Color(0.7, 0.7, 0.7)  # Gray concrete
 ```
 
 ### HUD Theme
+
 **File:** `scripts/ui/hud.gd`
 
 Modify font sizes, positions, colors for custom HUD look.
@@ -376,21 +421,25 @@ Modify font sizes, positions, colors for custom HUD look.
 ### Common Issues
 
 **Issue:** Player doesn't move
+
 - ✅ Check input map (Project → Project Settings → Input Map)
 - ✅ Verify player script is attached to CharacterBody3D node
 
 **Issue:** NPCs not appearing
+
 - ✅ Check scenes exist in correct paths
 - ✅ Verify spawn functions called in main.gd
 - ✅ Check console for error messages (F8)
 
 **Issue:** Low FPS
+
 - ✅ Reduce number of spawned NPCs
 - ✅ Lower world size
 - ✅ Disable minimap temporarily
 - ✅ Update graphics drivers
 
 **Issue:** Vehicle doesn't move
+
 - ✅ Ensure vehicle has collision shape
 - ✅ Check vehicle script attached
 - ✅ Verify player can enter (E key)
@@ -398,6 +447,7 @@ Modify font sizes, positions, colors for custom HUD look.
 ### Debug Mode
 
 Press **F8** in Godot editor to open debugger:
+
 - View variables in real-time
 - Step through code
 - Check node tree
@@ -406,6 +456,7 @@ Press **F8** in Godot editor to open debugger:
 ### Print Debugging
 
 Add debug info to console:
+
 ```gdscript
 print("Player position: ", global_position)
 print("NPC count: ", get_tree().get_nodes_in_group("npc").size())
@@ -417,12 +468,14 @@ print("Money: $", Globals.player_money)
 ## 📈 Performance & Optimization
 
 ### Current Performance
+
 - **FPS:** 60+ on modern hardware
 - **Memory:** 800MB - 1.5GB
 - **Load Time:** 5-10 seconds
 - **World Size:** 500x500 units
 
 ### Optimization Tips
+
 1. Use Level Streaming for large worlds
 2. Enable Occlusion Culling
 3. Use LOD (Level of Detail) for distant objects
@@ -435,16 +488,19 @@ print("Money: $", Globals.player_money)
 ## 📚 Learning Resources
 
 ### Official Documentation
+
 - **Godot 4 Docs:** https://docs.godotengine.org/
 - **GDScript Guide:** https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/
 - **3D Guide:** https://docs.godotengine.org/en/stable/tutorials/3d/
 
 ### Community Resources
+
 - **Godot Discord:** https://discord.gg/godotengine
 - **Reddit r/godot:** https://reddit.com/r/godot
 - **Godot Forum:** https://forum.godotengine.org/
 
 ### Video Tutorials
+
 - **GDQuest (YouTube):** Game dev with Godot
 - **Brackeys (YouTube):** Game mechanics
 - **HeartBeast (YouTube):** 3D game development
@@ -454,6 +510,7 @@ print("Money: $", Globals.player_money)
 ## 🎬 Roadmap & Future Features
 
 ### Planned Features (Phase 2)
+
 - [ ] Advanced weather system
 - [ ] Day/night cycle
 - [ ] More vehicle types
@@ -472,12 +529,14 @@ print("Money: $", Globals.player_money)
 ## 📝 Version History
 
 ### v1.0.0 (Current)
+
 - **Date:** April 18, 2026
 - **Status:** Complete restructuring complete
 - **Features:** 20+ core systems
 - **Status:** ✅ Ready to Play
 
 ### v0.9.0 (In Development)
+
 - Next phase with advanced features
 
 ---
@@ -485,10 +544,12 @@ print("Money: $", Globals.player_money)
 ## 📄 License & Attribution
 
 ### Code
+
 - Original code: MIT-like (free to use/modify)
 - Based on Pygame GTA_LITE prototype
 
 ### Assets
+
 - All assets integrated are CC0 or CC-BY
 - When downloading assets, verify license:
   - ✅ CC0 (public domain)
@@ -496,6 +557,7 @@ print("Money: $", Globals.player_money)
   - ❌ Other licenses (check requirements)
 
 ### Attribution Template
+
 ```
 If using CC-BY assets, include:
 "[Asset Name]" by [Creator] is licensed under CC-BY 4.0
@@ -515,6 +577,7 @@ Source: [URL]
 5. Submit pull request
 
 ### Code Style Guide
+
 - Use snake_case for variables
 - Use PascalCase for class names
 - Add comments for complex logic
@@ -526,12 +589,14 @@ Source: [URL]
 ## 📞 Support
 
 ### Need Help?
+
 1. Check relevant documentation file
 2. Review debug console (F8)
 3. Search Godot documentation
 4. Ask in Godot community forums
 
 ### Report Issues
+
 - Document what went wrong
 - Include error messages
 - List reproduction steps

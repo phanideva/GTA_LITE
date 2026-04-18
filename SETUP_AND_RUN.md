@@ -16,7 +16,7 @@
 
 1. Run Godot executable
 2. Click **Open Project**
-3. Navigate to: `d:\GTA_LITE\godot_project\`
+3. Navigate to: `d:\GTA_LITE\GangsterTownAdventures\`
 4. Click **Open**
 5. Wait for Godot to load the project (30-60 seconds first time)
 
@@ -25,11 +25,13 @@
 ## Step 3: Run the Game
 
 ### Option A: Editor Play
+
 1. Press **F5** or click the ▶️ **Play** button (top-right)
 2. Game window opens in 3D
 3. Play with keyboard/mouse
 
 ### Option B: Standalone Build
+
 1. Go to **Project** → **Export**
 2. Select target OS (Windows, Linux, Mac)
 3. Click **Export Project**
@@ -43,6 +45,7 @@
 ### Download Free 3D Assets
 
 #### Character Models
+
 ```
 Download from:
 - Sketchfab.com (search: "free character 3d model")
@@ -53,6 +56,7 @@ Download formats: .glb, .gltf, .fbx
 ```
 
 #### Vehicle Models
+
 ```
 Download from:
 - Sketchfab.com (search: "free car model")
@@ -62,6 +66,7 @@ Download formats: .glb, .gltf
 ```
 
 #### Environment Assets
+
 ```
 Download from:
 - Sketchfab.com (search: "free city buildings")
@@ -73,34 +78,35 @@ Download formats: .glb, .gltf
 ### Import Assets into Project
 
 1. **Create folders** (if not exists):
-   - `godot_project/assets/models/`
-   - `godot_project/assets/textures/`
-   - `godot_project/assets/audio/`
+   - `GangsterTownAdventures/assets/models/`
+   - `GangsterTownAdventures/assets/textures/`
+   - `GangsterTownAdventures/assets/audio/`
 
-2. **Copy downloaded files** into respective folders
+```
+# Open project from command line
+godot -e d:\GTA_LITE\GangsterTownAdventures
 
-3. **Godot auto-imports** - No manual action needed
+# Export to Windows (example)
+godot --headless --export-debug "Windows Desktop" d:\GTA_LITE\GangsterTownAdventures\build\GangsterTownAdventures.exe
 
-4. **Use in scenes:**
-   - Drag files from file manager into scene
-   - Or use preload in scripts
-
----
+# Run exported game
+d:\GTA_LITE\GangsterTownAdventures\build\GangsterTownAdventures.exe
+```
 
 ## Step 5: Play the Game
 
 ### Controls
 
-| Key | Action |
-|-----|--------|
-| **W/A/S/D** | Move |
-| **Space** | Jump |
-| **Shift** | Sprint |
-| **Mouse** | Look around |
-| **E** | Enter/Exit vehicle |
-| **F** | Melee attack |
-| **Left Mouse** | Shoot |
-| **Esc** | Pause/Menu |
+| Key            | Action             |
+| -------------- | ------------------ |
+| **W/A/S/D**    | Move               |
+| **Space**      | Jump               |
+| **Shift**      | Sprint             |
+| **Mouse**      | Look around        |
+| **E**          | Enter/Exit vehicle |
+| **F**          | Melee attack       |
+| **Left Mouse** | Shoot              |
+| **Esc**        | Pause/Menu         |
 
 ### Game Objectives
 
@@ -115,22 +121,26 @@ Download formats: .glb, .gltf
 ## Troubleshooting
 
 ### Game Won't Open
+
 - ✅ Ensure Godot 4.x is installed
 - ✅ Check project path is correct
 - ✅ Verify no files are corrupted
 
 ### No Graphics
+
 - ✅ Update graphics drivers
 - ✅ Check GPU supports OpenGL 3.3+
 - ✅ Use "GL Compatibility" renderer (default)
 
 ### Performance Issues
+
 - ✅ Lower resolution in settings
 - ✅ Reduce draw distance
 - ✅ Close background applications
 - ✅ Update GPU drivers
 
 ### Missing Assets
+
 - ✅ Download assets from recommended sources
 - ✅ Place in `assets/` folder
 - ✅ Restart Godot
@@ -141,7 +151,7 @@ Download formats: .glb, .gltf
 
 ```
 d:\GTA_LITE\
-├── godot_project/           ← THIS IS THE GAME PROJECT
+├── GangsterTownAdventures/           ← THIS IS THE GAME PROJECT
 │   ├── project.godot
 │   ├── README.md
 │   ├── assets/
@@ -169,7 +179,9 @@ d:\GTA_LITE\
 ## Next: Customization
 
 ### Add More NPCs
+
 Edit `scripts/main.gd` - Modify spawn functions:
+
 ```gdscript
 func spawn_npcs():
     for i in range(10):  # Change 5 to 10 for more NPCs
@@ -179,13 +191,17 @@ func spawn_npcs():
 ```
 
 ### Change World Size
+
 Edit `scripts/systems/settings.gd`:
+
 ```gdscript
 const WORLD_SIZE = Vector3(1000, 100, 1000)  # Bigger world
 ```
 
 ### Add Custom Missions
+
 Edit `scripts/systems/mission_system.gd`:
+
 ```gdscript
 var missions = [
     {"title": "Your Mission", "description": "...", "reward": 500},
@@ -197,12 +213,12 @@ var missions = [
 
 ## Performance Stats
 
-| Metric | Target | Typical |
-|--------|--------|---------|
-| FPS | 60+ | 65-144 |
-| Memory | < 2GB | 800MB-1.5GB |
-| World Size | 500x500 | Expandable |
-| NPCs | 10-20 | 10+ spawned |
+| Metric     | Target  | Typical     |
+| ---------- | ------- | ----------- |
+| FPS        | 60+     | 65-144      |
+| Memory     | < 2GB   | 800MB-1.5GB |
+| World Size | 500x500 | Expandable  |
+| NPCs       | 10-20   | 10+ spawned |
 
 ---
 
@@ -219,7 +235,7 @@ var missions = [
 
 ```bash
 # Open project from command line
-godot -e d:\GTA_LITE\godot_project
+godot -e d:\GTA_LITE\GangsterTownAdventures
 
 # Export to Windows
 godot --export-release Windows d:\GTA_LITE\build\game.exe

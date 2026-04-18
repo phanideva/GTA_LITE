@@ -1,6 +1,6 @@
 # 🏙️ Gangster Town Adventures
 
-**An open-world 3D action-adventure game built with Godot Engine 4.6**
+**An open-world 3D action-adventure game built with Godot Engine 4.6.2**
 
 Rise from a nobody to the underboss of the most powerful crime family in Gangster Town. Complete story missions, engage in street combat, steal vehicles, evade police, and take over the city — all in a fully explorable 3D open world.
 
@@ -131,19 +131,19 @@ Everything leads to this. Take down Snake Eye and his elite soldiers in an all-o
    ```bash
    git clone https://github.com/yourusername/gangster-town-adventures.git
    ```
-3. Open Godot → **Import** → Navigate to `godot_project/project.godot`
+3. Open Godot → **Open Project** → Navigate to `GangsterTownAdventures/project.godot` (project folder is `GangsterTownAdventures/` in the repo root)
 4. Press **F5** to play!
 
 ### Build Executable
 
-See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for detailed build and distribution steps.
+See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for detailed build and distribution steps. A built Windows executable is available in `GangsterTownAdventures/build/` after export.
 
 ---
 
 ## 🏗️ Project Structure
 
 ```
-godot_project/
+GangsterTownAdventures/
 ├── project.godot              # Godot project configuration
 ├── export_presets.cfg         # Export settings for Windows build
 ├── scenes/
@@ -189,12 +189,21 @@ godot_project/
 
 ## ⚙️ Technical Details
 
-- **Engine:** Godot 4.6 (GDScript 2.0)
+- **Engine:** Godot 4.6.2 (GDScript 2.0)
 - **Renderer:** OpenGL Compatibility (wide GPU support)
 - **Resolution:** 1920×1080 (windowed)
 - **Physics:** Godot Physics 3D
 - **Character Models:** Procedural humanoids built from primitive meshes
 - **Audio:** Real-time procedural sound generation (no external audio files)
+
+## 🛠️ Technologies Used
+
+- **Godot Engine:** 4.6.2 (editor & export templates)
+- **Scripting:** GDScript 2.0 (Godot native scripting)
+- **Rendering:** OpenGL Compatibility profile (recommended for broad GPU support)
+- **Build & Export:** Godot Export Templates (Windows Desktop build)
+- **Version Control:** Git (recommended)
+- **Platform Tools:** PowerShell for Windows automation and shortcuts
 
 ---
 

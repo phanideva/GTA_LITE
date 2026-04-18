@@ -5,8 +5,9 @@
 Run through this checklist before playing the game for the first time.
 
 ### 1. Environment Setup
+
 - [ ] Godot 4.x installed
-- [ ] Project folder exists: `d:\GTA_LITE\godot_project\`
+- [ ] Project folder exists: `d:\GTA_LITE\GangsterTownAdventures\`
 - [ ] All script files present in `scripts/` folder
 - [ ] All scene files present in `scenes/` folder
 - [ ] `project.godot` config file exists
@@ -14,6 +15,7 @@ Run through this checklist before playing the game for the first time.
 ### 2. File Verification
 
 **Core Script Files (Required):**
+
 - [ ] `scripts/globals.gd`
 - [ ] `scripts/systems/settings.gd`
 - [ ] `scripts/systems/mission_system.gd`
@@ -33,6 +35,7 @@ Run through this checklist before playing the game for the first time.
 - [ ] `scripts/main.gd`
 
 **Scene Files (Required):**
+
 - [ ] `scenes/main/main.tscn`
 - [ ] `scenes/player/bullet.tscn`
 - [ ] `scenes/vehicles/vehicle.tscn`
@@ -43,6 +46,7 @@ Run through this checklist before playing the game for the first time.
 - [ ] `scenes/ui/main_menu.tscn`
 
 ### 3. Asset Folders
+
 - [ ] `assets/models/` folder exists
 - [ ] `assets/textures/` folder exists
 - [ ] `assets/audio/` folder exists
@@ -52,17 +56,20 @@ Run through this checklist before playing the game for the first time.
 ## 🚀 Launch Instructions
 
 ### Step 1: Open Project
+
 1. Launch Godot 4.x
 2. Click **Open Project**
-3. Navigate to: `d:\GTA_LITE\godot_project\`
+3. Navigate to: `d:\GTA_LITE\GangsterTownAdventures\`
 4. Click **Open**
 
 ### Step 2: Wait for Import
+
 - Godot imports all scenes and scripts
 - First launch takes 30-60 seconds
 - Watch for import progress in bottom-right
 
 ### Step 3: Play
+
 - Press **F5** or click Play (▶️) button
 - Game window opens with 3D world
 - Player spawns in center of world
@@ -72,6 +79,7 @@ Run through this checklist before playing the game for the first time.
 ## 🧪 Testing Matrix
 
 ### Test 1: Basic Startup
+
 ```
 Objective: Verify game launches without errors
 Expected: Game window opens, no crash
@@ -86,6 +94,7 @@ Steps:
 ```
 
 ### Test 2: Player Movement
+
 ```
 Objective: Verify WASD movement works
 Expected: Player moves in 3D space
@@ -101,6 +110,7 @@ Steps:
 ```
 
 ### Test 3: Camera Control
+
 ```
 Objective: Verify mouse look works
 Expected: Camera rotates with mouse
@@ -113,6 +123,7 @@ Steps:
 ```
 
 ### Test 4: NPC Spawning
+
 ```
 Objective: Verify NPCs appear in world
 Expected: See pedestrians, police, gangsters walking around
@@ -125,13 +136,14 @@ Steps:
 ```
 
 ### Test 5: Vehicle System
+
 ```
 Objective: Verify vehicle entry/driving works
-Expected: Can enter and drive car
+Expected: Can enter and drive car (there is a 0.5s entry cooldown to avoid immediate re-exit)
 Steps:
 1. Find vehicle (gray box)
 2. Press E near it (should interact)
-3. Once inside, use WASD to drive
+3. Once inside, wait briefly (~0.5s) then use WASD to drive
 4. Press E to exit
 
 ✅ PASS: Enter car, drive, exit successfully
@@ -139,6 +151,7 @@ Steps:
 ```
 
 ### Test 6: Combat System
+
 ```
 Objective: Verify shooting and melee work
 Expected: Can shoot and punch NPCs
@@ -153,6 +166,7 @@ Steps:
 ```
 
 ### Test 7: Mission System
+
 ```
 Objective: Verify missions can be started
 Expected: Mission objectives display in HUD
@@ -166,6 +180,7 @@ Steps:
 ```
 
 ### Test 8: HUD Display
+
 ```
 Objective: Verify all HUD elements display
 Expected: See health, money, wanted level, FPS
@@ -182,6 +197,7 @@ Steps:
 ```
 
 ### Test 9: Minimap
+
 ```
 Objective: Verify minimap displays
 Expected: Small map showing player position
@@ -194,6 +210,7 @@ Steps:
 ```
 
 ### Test 10: Save/Load
+
 ```
 Objective: Verify save system works
 Expected: Can save and load game
@@ -214,9 +231,11 @@ Steps:
 ## 🐛 Common Issues & Solutions
 
 ### Issue 1: Game Won't Start
+
 **Symptoms:** Crash on launch, black screen, or error message
 
 **Solutions:**
+
 1. Verify all script files exist
 2. Check console (F8) for error messages
 3. Ensure project.godot is in correct location
@@ -224,18 +243,22 @@ Steps:
 5. Verify Godot version is 4.x (not 3.x)
 
 ### Issue 2: Player Can't Move
+
 **Symptoms:** WASD keys do nothing
 
 **Solutions:**
+
 1. Verify input map is configured (Project → Project Settings → Input Map)
 2. Check player script is attached to CharacterBody3D node
 3. Verify no collision issues (Player falling through ground = collision problem)
 4. Check console for scripting errors
 
 ### Issue 3: Visible Frame Rate Drop
+
 **Symptoms:** Game runs below 30 FPS
 
 **Solutions:**
+
 1. Reduce NPC spawn count in main.gd (change from 5 to 3)
 2. Reduce world size in settings.gd
 3. Lower render resolution (Project → Project Settings → Display)
@@ -243,28 +266,40 @@ Steps:
 5. Update graphics drivers
 
 ### Issue 4: NPCs Not Appearing
+
 **Symptoms:** World is empty, no pedestrians/police
 
 **Solutions:**
+
 1. Verify scene files exist: `scenes/ai/pedestrian.tscn`, etc.
 2. Check main.gd spawn functions are called
 3. Look for errors in console (F8)
 4. Verify physics bodies are set correctly in scenes
 
 ### Issue 5: Can't Enter Vehicles
+
 **Symptoms:** Pressing E near car does nothing
 
+**Notes:** The vehicle interaction code was updated to include a 0.5s entry cooldown to prevent immediate re-exit after entering. If you press E and nothing happens, try moving slightly closer and press E again; check the debug console for messages printed by the interaction handler.
+
 **Solutions:**
-1. Verify vehicle.tscn scene is correct
-2. Check collision shapes exist on vehicle
-3. Verify player is in group "vehicle"
-4. Try pressing E at different distances
-5. Check console for interaction errors
+
+1. Verify `scenes/vehicles/vehicle.tscn` is correct
+2. Check collision shapes exist on the vehicle (CollisionShape3D present)
+3. Verify vehicles are added to the `vehicle` or `traffic` groups
+4. Try pressing E at different distances (player detection uses XZ distance)
+5. Check console for interaction errors (open F8 in editor)
+
+### Traffic driving over sidewalks
+
+If traffic is cutting across sidewalks, ensure `scripts/world/environment.gd` has sidewalk `StaticBody3D` collision geometry (sidewalks were updated to have collision). Also confirm `scripts/ai/traffic.gd` uses road-constrained waypoints — traffic should follow road centerlines and lane offsets.
 
 ### Issue 6: Graphics Issues
+
 **Symptoms:** Blurry, glitchy, or missing graphics
 
 **Solutions:**
+
 1. Update graphics drivers
 2. Check GPU supports OpenGL 3.3+
 3. Verify "GL Compatibility" renderer is selected
@@ -276,19 +311,22 @@ Steps:
 ## 📊 Expected Performance
 
 ### Target Hardware
+
 - **GPU:** NVIDIA GTX 1060 or equivalent
 - **CPU:** Intel i5-8400 or equivalent
 - **RAM:** 8GB
 
 ### Performance Metrics
-| Metric | Expected | Acceptable |
-|--------|----------|------------|
-| FPS | 60+ | 30+ |
-| Frametime | 16ms | 33ms |
-| Memory | 1-1.5GB | <2GB |
-| Load Time | 5-10s | <15s |
+
+| Metric    | Expected | Acceptable |
+| --------- | -------- | ---------- |
+| FPS       | 60+      | 30+        |
+| Frametime | 16ms     | 33ms       |
+| Memory    | 1-1.5GB  | <2GB       |
+| Load Time | 5-10s    | <15s       |
 
 ### Performance Optimization Tips
+
 1. **If FPS < 30:**
    - Reduce NPC count (edit main.gd)
    - Lower render resolution
@@ -304,9 +342,11 @@ Steps:
 ## 🔍 Debug Mode
 
 ### Accessing Debug Console
+
 Press **F8** in Godot editor
 
 ### Useful Debug Commands
+
 ```gdscript
 # Print player position
 print("Player pos: ", Globals.player.global_position)
@@ -325,6 +365,7 @@ print("Game state: ", Globals.game_state)
 ```
 
 ### Viewing Errors
+
 1. Press F8 to open debugger
 2. Look at "Errors" tab
 3. Red text = error, Yellow = warning
@@ -337,24 +378,28 @@ print("Game state: ", Globals.game_state)
 Before considering game complete, verify:
 
 **Functionality:**
+
 - [ ] All 10 tests above PASS
 - [ ] No crashes after 30 minutes of play
 - [ ] All systems responding correctly
 - [ ] Save/Load works reliably
 
 **Performance:**
+
 - [ ] Maintains 60+ FPS (target hardware)
 - [ ] No memory leaks (RAM stable)
 - [ ] No stuttering or lag spikes
 - [ ] Load time < 15 seconds
 
 **Content:**
+
 - [ ] 5+ missions available
 - [ ] Multiple NPCs types working
 - [ ] Shops and economy functional
 - [ ] Police/Wanted system working
 
 **Polish:**
+
 - [ ] HUD displays clearly
 - [ ] No missing textures/geometry
 - [ ] Controls feel responsive
@@ -389,6 +434,7 @@ Status: [ ] PASS [ ] FAIL
 ## 🎯 Sign-Off Checklist
 
 **Game is READY for 1.0 release when:**
+
 - [ ] All 10 tests PASS
 - [ ] No critical bugs found
 - [ ] Performance meets targets
@@ -397,8 +443,9 @@ Status: [ ] PASS [ ] FAIL
 - [ ] Save system reliable
 
 **Sign-off:**
-- [ ] Developer: __________ Date: ______
-- [ ] Tester: __________ Date: ______
+
+- [ ] Developer: \***\*\_\_\*\*** Date: **\_\_**
+- [ ] Tester: \***\*\_\_\*\*** Date: **\_\_**
 
 ---
 
