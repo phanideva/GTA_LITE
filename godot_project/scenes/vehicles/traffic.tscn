@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://ds4w8x2n6r8q9"]
+
+[ext_resource type="Script" path="res://scripts/ai/traffic.gd" id="1"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_m5o7q"]
+size = Vector3(4, 2, 6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_u8v6w"]
+size = Vector3(4, 2, 6)
+
+[node name="Traffic" type="RigidBody3D"]
+freeze_mode = 1
+freeze = true
+script = ExtResource("1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_m5o7q")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_u8v6w")
