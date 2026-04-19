@@ -256,89 +256,95 @@ func _finish_intro():
 			el.queue_free()
 	intro_elements.clear()
 
-	# Start menu background music
-	menu_music = AudioStreamPlayer.new()
-	menu_music.name = "MenuMusic"
-	menu_music.bus = "Master"
-	menu_music.volume_db = -12.0
-	add_child(menu_music)
-	var menu_stream = SFX.generate_menu_music()
-	if menu_stream:
-		menu_music.stream = menu_stream
-		menu_music.play()
-
-	# Build actual menu
+	# No menu music — user requested music only in intro
 	_build_menu()
 
 func _build_menu():
-	# Full screen dark background with gradient effect
+	# Full screen dark background
 	var bg = get_node_or_null("IntroBG")
 	if not bg:
 		bg = ColorRect.new()
 		bg.set_anchors_preset(PRESET_FULL_RECT)
 		add_child(bg)
-	bg.color = Color(0.02, 0.02, 0.05)
+	bg.color = Color(0.0, 0.0, 0.0)
 
-	# Title
+	# City skyline silhouette (dark gradient strip)
+	var skyline = ColorRect.new()
+	skyline.color = Color(0.02, 0.04, 0.02)
+	skyline.set_anchors_preset(PRESET_BOTTOM_WIDE)
+	skyline.position.y = -200
+	skyline.size = Vector2(0, 200)
+	skyline.set_deferred("size", Vector2(1920, 200))
+	add_child(skyline)
+
+	# GTA V style — "GANGSTER TOWN" in large italic-look block letters
 	var title = Label.new()
-	title.text = "GANGSTER TOWN"
-	title.add_theme_font_size_override("font_size", 72)
-	title.add_theme_color_override("font_color", Color(0.95, 0.7, 0.1))
+	title.text = "GANGSTER  TOWN"
+	title.add_theme_font_size_override("font_size", 108)
+	title.add_theme_color_override("font_color", Color(0.45, 0.75, 0.35))  # GTA V green
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_preset(PRESET_CENTER_TOP)
-	title.position = Vector2(-250, 60)
-	title.size = Vector2(500, 100)
+	title.position = Vector2(-500, 50)
+	title.size = Vector2(1000, 130)
 	add_child(title)
 
-	# Subtitle
+	# Subtitle — smaller, white/silver
 	var subtitle = Label.new()
 	subtitle.text = "ADVENTURES"
-	subtitle.add_theme_font_size_override("font_size", 36)
-	subtitle.add_theme_color_override("font_color", Color(0.9, 0.35, 0.1))
+	subtitle.add_theme_font_size_override("font_size", 42)
+	subtitle.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.set_anchors_preset(PRESET_CENTER_TOP)
-	subtitle.position = Vector2(-200, 140)
-	subtitle.size = Vector2(400, 40)
+	subtitle.position = Vector2(-250, 170)
+	subtitle.size = Vector2(500, 50)
 	add_child(subtitle)
+
+	# Thin green line under title
+	var title_line = ColorRect.new()
+	title_line.color = Color(0.45, 0.75, 0.35)
+	title_line.set_anchors_preset(PRESET_CENTER_TOP)
+	title_line.position = Vector2(-350, 162)
+	title_line.size = Vector2(700, 3)
+	add_child(title_line)
 
 	# Menu buttons
 	var btn_container = VBoxContainer.new()
 	btn_container.set_anchors_preset(PRESET_CENTER)
-	btn_container.position = Vector2(-120, -60)
-	btn_container.size = Vector2(240, 300)
-	btn_container.add_theme_constant_override("separation", 12)
+	btn_container.position = Vector2(-130, -30)
+	btn_container.size = Vector2(260, 320)
+	btn_container.add_theme_constant_override("separation", 14)
 	add_child(btn_container)
 
 	var btn_texts = ["START GAME", "LOAD GAME", "CONTROLS", "EXIT"]
 	for i in range(btn_texts.size()):
 		var btn = Button.new()
 		btn.text = btn_texts[i]
-		btn.custom_minimum_size = Vector2(240, 50)
-		btn.add_theme_font_size_override("font_size", 22)
+		btn.custom_minimum_size = Vector2(260, 54)
+		btn.add_theme_font_size_override("font_size", 24)
 
 		var style = StyleBoxFlat.new()
-		style.bg_color = Color(0.12, 0.12, 0.18)
-		style.border_color = Color(0.95, 0.7, 0.1)
+		style.bg_color = Color(0.05, 0.08, 0.05)
+		style.border_color = Color(0.45, 0.75, 0.35)
 		style.set_border_width_all(2)
-		style.set_corner_radius_all(4)
+		style.set_corner_radius_all(3)
 		btn.add_theme_stylebox_override("normal", style)
 
 		var hover_style = StyleBoxFlat.new()
-		hover_style.bg_color = Color(0.25, 0.2, 0.08)
-		hover_style.border_color = Color(0.95, 0.7, 0.1)
+		hover_style.bg_color = Color(0.15, 0.25, 0.1)
+		hover_style.border_color = Color(0.55, 0.9, 0.4)
 		hover_style.set_border_width_all(2)
-		hover_style.set_corner_radius_all(4)
+		hover_style.set_corner_radius_all(3)
 		btn.add_theme_stylebox_override("hover", hover_style)
 
 		var pressed_style = StyleBoxFlat.new()
-		pressed_style.bg_color = Color(0.4, 0.3, 0.05)
-		pressed_style.border_color = Color(1.0, 0.8, 0.2)
+		pressed_style.bg_color = Color(0.25, 0.4, 0.15)
+		pressed_style.border_color = Color(0.6, 1.0, 0.4)
 		pressed_style.set_border_width_all(2)
-		pressed_style.set_corner_radius_all(4)
+		pressed_style.set_corner_radius_all(3)
 		btn.add_theme_stylebox_override("pressed", pressed_style)
 
-		btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
-		btn.add_theme_color_override("font_hover_color", Color(1.0, 0.9, 0.4))
+		btn.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+		btn.add_theme_color_override("font_hover_color", Color(0.55, 0.9, 0.4))
 
 		btn_container.add_child(btn)
 		buttons.append(btn)
@@ -352,7 +358,7 @@ func _build_menu():
 	var ver = Label.new()
 	ver.text = "v1.0 — Gangster Town Adventures — By Phaneendra D — Made with Godot 4"
 	ver.add_theme_font_size_override("font_size", 14)
-	ver.add_theme_color_override("font_color", Color(0.4, 0.4, 0.45))
+	ver.add_theme_color_override("font_color", Color(0.3, 0.45, 0.3))
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ver.set_anchors_preset(PRESET_BOTTOM_WIDE)
 	ver.position.y = -30

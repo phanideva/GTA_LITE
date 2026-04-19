@@ -71,14 +71,18 @@ func _build_player_model():
 	var CharModel = load("res://scripts/utils/character_model.gd")
 	char_model = Node3D.new()
 	char_model.set_script(CharModel)
-	char_model.skin_color = Color(0.85, 0.7, 0.55)
-	char_model.shirt_color = Color(0.1, 0.1, 0.1)
-	char_model.pants_color = Color(0.15, 0.15, 0.2)
-	char_model.shoe_color = Color(0.2, 0.1, 0.05)
-	char_model.hair_color = Color(0.1, 0.07, 0.03)
+	# Vice City protagonist — tanned skin, Hawaiian shirt, light pants
+	char_model.skin_color = Color(0.85, 0.72, 0.55)
+	char_model.shirt_color = Color(0.15, 0.65, 0.70)  # Teal Hawaiian shirt
+	char_model.pants_color = Color(0.85, 0.82, 0.75)   # Light khaki pants
+	char_model.shoe_color = Color(0.55, 0.35, 0.18)    # Brown loafers
+	char_model.hair_color = Color(0.12, 0.08, 0.04)    # Dark slicked hair
+	char_model.body_type = 1  # Athletic build
 	char_model.accessory_type = "gun"
 	model_root.add_child(char_model)
 	char_model.build()
+	# Make player character larger / more prominent (heroic scale)
+	model_root.scale = Vector3(1.25, 1.25, 1.25)
 
 func enter_vehicle(vehicle: Node3D) -> void:
 	print("[PLAYER] Entering vehicle: %s" % vehicle.name)
@@ -215,10 +219,38 @@ func handle_combat():
 		melee_attack()
 
 func handle_weapon_switch():
+	var prev_weapon = current_weapon
 	if Input.is_action_just_pressed("weapon_1"): current_weapon = Weapon.MELEE
 	if Input.is_action_just_pressed("weapon_2"): current_weapon = Weapon.PISTOL
 	if Input.is_action_just_pressed("weapon_3"): current_weapon = Weapon.RIFLE
 	if Input.is_action_just_pressed("weapon_4"): current_weapon = Weapon.SHOTGUN
+	if current_weapon != prev_weapon:
+		_update_weapon_model()
+
+func _update_weapon_model():
+	# Show/hide weapon accessory on character model based on current weapon
+	if not char_model:
+		return
+	# Find gun node in the character model (attached to right arm)
+	var gun_node = _find_node_recursive(char_model, "Gun")
+	var rifle_node = _find_node_recursive(char_model, "Rifle")
+	if gun_node:
+		gun_node.visible = (current_weapon == Weapon.PISTOL or current_weapon == Weapon.SHOTGUN)
+	if rifle_node:
+		rifle_node.visible = (current_weapon == Weapon.RIFLE)
+	# If switching to MELEE, also hide any weapon visual
+	if current_weapon == Weapon.MELEE:
+		if gun_node: gun_node.visible = false
+		if rifle_node: rifle_node.visible = false
+
+func _find_node_recursive(node: Node, node_name: String) -> Node:
+	if node.name == node_name:
+		return node
+	for child in node.get_children():
+		var result = _find_node_recursive(child, node_name)
+		if result:
+			return result
+	return null
 
 var nearby_vehicle: Node3D = null  # Track nearest vehicle for HUD prompt
 var _e_key_was_pressed = false  # Track E key state for manual detection

@@ -3,32 +3,28 @@ extends Node3D
 
 var sun: DirectionalLight3D
 var time_of_day = 8.0
-var day_speed = 0.5
+var day_speed = 0.015
 var streetlights: Array = []
 
 func _ready():
 	add_to_group("world_environment")
+	print("[WORLD] Starting environment generation...")
 	create_terrain()
 	create_roads()
 	create_road_curbs()
-	create_traffic_lights()
-	create_lane_markings()
-	create_crosswalks()
 	create_buildings()
 	create_shops()
+	create_ocean_and_beach()
+	create_traffic_lights()
+	create_crosswalks()
 	create_trees()
 	create_park()
 	create_streetlights()
-	create_benches()
-	create_fences()
-	create_dumpsters()
-	create_fire_hydrants()
-	create_traffic_cones()
-	create_bus_stops()
 	create_sidewalks()
 	create_districts()
 	setup_lighting()
 	setup_sky()
+	print("[WORLD] Environment generation complete!")
 
 func _process(delta):
 	time_of_day += delta * day_speed
@@ -50,13 +46,12 @@ func create_terrain():
 	ground.name = "Ground"
 	add_child(ground)
 
-	# Main ground (grass with better material)
 	var gm = MeshInstance3D.new()
 	var plane = PlaneMesh.new()
-	plane.size = Vector2(500, 500)
+	plane.size = Vector2(1000, 1000)
 	gm.mesh = plane
 	var grass_mat = StandardMaterial3D.new()
-	grass_mat.albedo_color = Color(0.22, 0.48, 0.18)
+	grass_mat.albedo_color = Color(0.18, 0.52, 0.22)
 	grass_mat.roughness = 0.95
 	grass_mat.metallic = 0.0
 	grass_mat.normal_enabled = false
@@ -69,53 +64,51 @@ func create_terrain():
 
 # ═══════════════════════ ROADS ═══════════════════════
 func create_roads():
-	# Main streets (wider)
-	_add_road(Vector3(0, 0.02, 0), Vector3(5, 0.15, 500))    # Main N-S
-	_add_road(Vector3(0, 0.02, 0), Vector3(500, 0.15, 5))    # Main E-W
+	# Main streets (4-lane boulevard — realistic 12m width)
+	_add_road(Vector3(0, 0.02, 0), Vector3(12, 0.15, 1200))    # Main N-S boulevard
+	_add_road(Vector3(0, 0.02, 0), Vector3(1200, 0.15, 12))    # Main E-W boulevard
 
-	# City grid
-	for i in range(-5, 6):
+	# City grid — from -8 to +8 blocks (50m spacing, realistic block size)
+	for i in range(-8, 9):
 		if i == 0: continue
-		_add_road(Vector3(i * 22, 0.02, 0), Vector3(3.5, 0.12, 500))
-		_add_road(Vector3(0, 0.02, i * 22), Vector3(500, 0.12, 3.5))
+		_add_road(Vector3(i * 50, 0.02, 0), Vector3(8.0, 0.12, 1200))   # 2-lane roads (8m)
+		_add_road(Vector3(0, 0.02, i * 50), Vector3(1200, 0.12, 8.0))
 
-	# Road markings (center lines)
-	for i in range(-5, 6):
-		for j in range(-10, 11):
-			_add_road_marking(Vector3(i * 22, 0.16, j * 8), true)
-			_add_road_marking(Vector3(j * 8, 0.16, i * 22), false)
+	# Road center lines — yellow dashed on every road
+	for i in range(-8, 9, 2):
+		for j in range(-12, 13):
+			_add_road_marking(Vector3(i * 50, 0.16, j * 20), true)
+			_add_road_marking(Vector3(j * 20, 0.16, i * 50), false)
 
 func create_road_curbs():
-	# Raised curbs along road edges for more realistic look
 	var curb_mat = _make_mat(Color(0.6, 0.6, 0.58), 0.85)
-	for i in range(-5, 6):
-		# N-S roads: curbs on both sides
+	for i in range(-8, 9):
 		for side in [-1, 1]:
 			var curb = MeshInstance3D.new()
 			var cm = BoxMesh.new()
-			cm.size = Vector3(0.2, 0.15, 500)
+			cm.size = Vector3(0.25, 0.15, 1200)
 			cm.material = curb_mat
 			curb.mesh = cm
-			curb.position = Vector3(i * 22 + side * 2.3, 0.12, 0)
+			curb.position = Vector3(i * 50 + side * 4.5, 0.12, 0)
 			add_child(curb)
-		# E-W roads: curbs on both sides
 		for side in [-1, 1]:
 			var curb = MeshInstance3D.new()
 			var cm = BoxMesh.new()
-			cm.size = Vector3(500, 0.15, 0.2)
+			cm.size = Vector3(1200, 0.15, 0.25)
 			cm.material = curb_mat
 			curb.mesh = cm
-			curb.position = Vector3(0, 0.12, i * 22 + side * 2.3)
+			curb.position = Vector3(0, 0.12, i * 50 + side * 4.5)
 			add_child(curb)
 
 func create_traffic_lights():
-	# Traffic lights at major intersections
+	# Traffic lights at major intersections only (every 3rd)
 	var intersections = []
-	for ix in range(-3, 4):
-		for iz in range(-3, 4):
+	for ix in range(-8, 9):
+		for iz in range(-8, 9):
 			if ix == 0 and iz == 0:
-				continue  # Skip center (park)
-			intersections.append(Vector3(ix * 22.0, 0, iz * 22.0))
+				continue
+			if (ix + iz) % 3 == 0:
+				intersections.append(Vector3(ix * 50.0, 0, iz * 50.0))
 	
 	for inter in intersections:
 		_add_traffic_light(inter)
@@ -123,10 +116,10 @@ func create_traffic_lights():
 func _add_traffic_light(pos: Vector3):
 	# Place traffic light pole at intersection corner
 	var corners = [
-		Vector3(3.5, 0, 3.5),
-		Vector3(-3.5, 0, 3.5),
-		Vector3(3.5, 0, -3.5),
-		Vector3(-3.5, 0, -3.5),
+		Vector3(5.5, 0, 5.5),
+		Vector3(-5.5, 0, 5.5),
+		Vector3(5.5, 0, -5.5),
+		Vector3(-5.5, 0, -5.5),
 	]
 	var corner = corners[randi() % corners.size()]
 	var light_pos = pos + corner
@@ -229,29 +222,55 @@ func _add_road_marking(pos: Vector3, is_ns: bool):
 
 # ═══════════════════════ BUILDINGS ═══════════════════════
 func create_buildings():
-	var building_data = [
-		# Downtown high-rises
-		[Vector3(33, 0, 33),   Vector3(14, 35, 14), Color(0.55, 0.58, 0.65)],
-		[Vector3(-33, 0, 33),  Vector3(12, 28, 12), Color(0.65, 0.6, 0.55)],
-		[Vector3(33, 0, -33),  Vector3(16, 42, 12), Color(0.5, 0.55, 0.6)],
-		[Vector3(-33, 0, -33), Vector3(14, 32, 14), Color(0.72, 0.68, 0.6)],
-		# Mid city
-		[Vector3(55, 0, 11),   Vector3(12, 20, 10), Color(0.7, 0.65, 0.58)],
-		[Vector3(-55, 0, -11), Vector3(14, 24, 12), Color(0.58, 0.62, 0.68)],
-		[Vector3(11, 0, 55),   Vector3(14, 22, 16), Color(0.6, 0.63, 0.7)],
-		[Vector3(-11, 0, -55), Vector3(12, 38, 12), Color(0.68, 0.6, 0.55)],
-		# Outer city
-		[Vector3(66, 0, -55),  Vector3(18, 16, 18), Color(0.7, 0.7, 0.65)],
-		[Vector3(-66, 0, 55),  Vector3(14, 26, 12), Color(0.6, 0.65, 0.7)],
-		[Vector3(88, 0, 0),    Vector3(12, 20, 14), Color(0.55, 0.6, 0.68)],
-		[Vector3(-88, 0, 0),   Vector3(16, 18, 12), Color(0.68, 0.62, 0.6)],
-		[Vector3(44, 0, 66),   Vector3(10, 14, 10), Color(0.72, 0.7, 0.65)],
-		[Vector3(-44, 0, -66), Vector3(12, 22, 14), Color(0.6, 0.65, 0.7)],
-		[Vector3(77, 0, 44),   Vector3(14, 12, 14), Color(0.65, 0.62, 0.6)],
-		[Vector3(-77, 0, -44), Vector3(12, 30, 10), Color(0.58, 0.6, 0.65)],
+	# Vice City style — pastel Art Deco colors, neon accents
+	var building_colors = [
+		Color(0.90, 0.75, 0.80),  # Pink pastel
+		Color(0.70, 0.88, 0.90),  # Aqua/teal
+		Color(0.95, 0.90, 0.75),  # Cream/sand
+		Color(0.85, 0.80, 0.95),  # Lavender
+		Color(0.95, 0.85, 0.70),  # Peach
+		Color(0.75, 0.90, 0.80),  # Mint green
+		Color(0.92, 0.92, 0.88),  # Off-white
+		Color(0.80, 0.85, 0.92),  # Light blue
+		Color(0.90, 0.78, 0.68),  # Coral
+		Color(0.88, 0.82, 0.75),  # Tan
+		Color(0.75, 0.80, 0.90),  # Periwinkle
+		Color(0.92, 0.80, 0.85),  # Rose
 	]
-	for d in building_data:
-		_add_building(d[0], d[1], d[2])
+	# Neon accent colors for building trim
+	var neon_colors = [
+		Color(1.0, 0.2, 0.6),   # Hot pink
+		Color(0.2, 0.9, 0.9),   # Cyan
+		Color(1.0, 0.5, 0.1),   # Orange neon
+		Color(0.5, 0.2, 1.0),   # Purple neon
+		Color(0.2, 1.0, 0.4),   # Green neon
+		Color(1.0, 1.0, 0.2),   # Yellow neon
+	]
+	
+	for bx in range(-7, 8):
+		for bz in range(-7, 8):
+			# Skip the center park area and shop blocks
+			if abs(bx) <= 1 and abs(bz) <= 1:
+				continue
+			# Skip ocean/beach area (south side)
+			if bz > 6:
+				continue
+			# Skip LA River channel area
+			if bx == 3 or bx == -3:
+				continue
+			
+			var block_center = Vector3((bx + 0.5) * 50, 0, (bz + 0.5) * 50)
+			var dist_from_center = Vector2(block_center.x, block_center.z).length()
+			# LA skyline: tall downtown, medium midtown, low suburbs
+			var max_height = 55.0 if dist_from_center < 60 else (35.0 if dist_from_center < 120 else (20.0 if dist_from_center < 180 else 10.0))
+			var min_height = 18.0 if dist_from_center < 60 else (8.0 if dist_from_center < 120 else (4.0 if dist_from_center < 180 else 3.0))
+			
+			var height = randf_range(min_height, max_height)
+			var width = randf_range(18, 35)
+			var depth = randf_range(18, 35)
+			var color = building_colors[randi() % building_colors.size()]
+			
+			_add_building(block_center, Vector3(width, height, depth), color)
 
 func _add_building(pos: Vector3, size: Vector3, color: Color):
 	var body = StaticBody3D.new()
@@ -262,13 +281,61 @@ func _add_building(pos: Vector3, size: Vector3, color: Color):
 	var bm = BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
-	mi.set_surface_override_material(0, _make_mat(color, 0.7, 0.1))
+	mi.set_surface_override_material(0, _make_mat(color, 0.6, 0.05))
 	body.add_child(mi)
 
-	# Windows (rows of small dark/lit rectangles on facade)
+	# Vice City neon accent strip along roofline
+	var neon_colors = [
+		Color(1.0, 0.2, 0.6), Color(0.2, 0.9, 0.9), Color(1.0, 0.5, 0.1),
+		Color(0.5, 0.2, 1.0), Color(0.2, 1.0, 0.4), Color(1.0, 1.0, 0.2),
+	]
+	var neon_color = neon_colors[randi() % neon_colors.size()]
+	var neon_mat = StandardMaterial3D.new()
+	neon_mat.albedo_color = neon_color
+	neon_mat.emission_enabled = true
+	neon_mat.emission = neon_color
+	neon_mat.emission_energy_multiplier = 0.8
+
+	# Neon roof trim (front)
+	var trim_f = MeshInstance3D.new()
+	var tfm = BoxMesh.new()
+	tfm.size = Vector3(size.x + 0.2, 0.12, 0.08)
+	tfm.material = neon_mat
+	trim_f.mesh = tfm
+	trim_f.position = Vector3(0, size.y / 2.0 - 0.3, size.z / 2.0 + 0.04)
+	body.add_child(trim_f)
+
+	# Neon roof trim (back)
+	var trim_b = MeshInstance3D.new()
+	trim_b.mesh = tfm
+	trim_b.position = Vector3(0, size.y / 2.0 - 0.3, -size.z / 2.0 - 0.04)
+	body.add_child(trim_b)
+
+	# Horizontal facade band (Art Deco style)
+	var band_mat = _make_mat(color.lightened(0.15), 0.5, 0.1)
+	var band = MeshInstance3D.new()
+	var bdm = BoxMesh.new()
+	bdm.size = Vector3(size.x + 0.15, 0.25, size.z + 0.15)
+	bdm.material = band_mat
+	band.mesh = bdm
+	band.position = Vector3(0, size.y * 0.15, 0)
+	body.add_child(band)
+
+	# Ground floor awning / storefront (Vice City shops)
+	if size.y > 6.0:
+		var awning_mat = _make_mat(neon_color.darkened(0.3), 0.7)
+		var awning = MeshInstance3D.new()
+		var awm = BoxMesh.new()
+		awm.size = Vector3(size.x * 0.8, 0.08, 1.5)
+		awm.material = awning_mat
+		awning.mesh = awm
+		awning.position = Vector3(0, -size.y / 2.0 + 3.5, size.z / 2.0 + 0.75)
+		body.add_child(awning)
+
+	# Windows (rows on facade — every 5th floor for perf)
 	var floors = int(size.y / 3.0)
-	for floor_i in range(1, floors):
-		for side in range(4):
+	for floor_i in range(1, floors, 5):
+		for side in range(2):  # front and back
 			var window = MeshInstance3D.new()
 			var wm = BoxMesh.new()
 			# Randomly lit window (~35% chance)
@@ -323,6 +390,12 @@ func create_shops():
 		["BINCO", Vector3(-55, 0, 33), Color(0.3, 0.3, 0.7), Color(0.4, 0.4, 0.9)],
 		["GAS STATION", Vector3(55, 0, -33), Color(0.6, 0.6, 0.6), Color(0.8, 0.15, 0.15)],
 		["HOSPITAL", Vector3(-55, 0, -33), Color(0.9, 0.9, 0.9), Color(0.9, 0.2, 0.2)],
+		["TATTOO PARLOR", Vector3(100, 0, 55), Color(0.3, 0.1, 0.3), Color(0.6, 0.2, 0.8)],
+		["BARBER SHOP", Vector3(-100, 0, 55), Color(0.2, 0.4, 0.6), Color(0.3, 0.5, 0.8)],
+		["PIZZA STACK", Vector3(100, 0, -55), Color(0.7, 0.3, 0.1), Color(0.9, 0.4, 0.1)],
+		["ZERO RC", Vector3(-100, 0, -55), Color(0.4, 0.6, 0.2), Color(0.5, 0.8, 0.3)],
+		["GYM", Vector3(140, 0, 12), Color(0.5, 0.5, 0.5), Color(0.8, 0.7, 0.1)],
+		["CASINO", Vector3(-140, 0, 12), Color(0.15, 0.1, 0.3), Color(0.9, 0.7, 0.2)],
 	]
 	for s in shops:
 		_add_shop(s[0], s[1], s[2], s[3])
@@ -395,13 +468,15 @@ func _add_shop(shop_name: String, pos: Vector3, wall_color: Color, sign_color: C
 
 # ═══════════════════════ TREES ═══════════════════════
 func create_trees():
-	for i in range(50):
-		var x = randf_range(-180, 180)
-		var z = randf_range(-180, 180)
-		# Skip roads and buildings
-		if abs(fmod(x, 22.0)) < 3.0 or abs(fmod(z, 22.0)) < 3.0:
+	for i in range(80):
+		var x = randf_range(-250, 250)
+		var z = randf_range(-250, 250)
+		if abs(fmod(x, 50.0)) < 6.0 or abs(fmod(z, 50.0)) < 6.0:
 			continue
 		if abs(x) < 15 and abs(z) < 15:
+			continue
+		# Skip beach area
+		if z > 115:
 			continue
 		_add_tree(Vector3(x, 0, z))
 
@@ -519,11 +594,10 @@ func create_park():
 # ═══════════════════════ STREETLIGHTS ═══════════════════════
 func create_streetlights():
 	var light_positions = []
-	# Along every road intersection
-	for i in range(-4, 5):
-		for j in range(-4, 5):
-			if (i + j) % 2 == 0:
-				light_positions.append(Vector3(i * 22 + 2.5, 0, j * 22 + 2.5))
+	for i in range(-8, 9):
+		for j in range(-8, 9):
+			if (i + j) % 5 == 0:
+				light_positions.append(Vector3(i * 50 + 4.8, 0, j * 50 + 4.8))
 
 	for lp in light_positions:
 		# Pole
@@ -572,8 +646,8 @@ func create_streetlights():
 # ═══════════════════════ BENCHES ═══════════════════════
 func create_benches():
 	var bench_positions = [
-		Vector3(6, 0, 3), Vector3(-6, 0, 3), Vector3(6, 0, -3), Vector3(-6, 0, -3),
-		Vector3(22, 0, 10), Vector3(-22, 0, -10), Vector3(44, 0, 22), Vector3(-44, 0, -22),
+		Vector3(8, 0, 5), Vector3(-8, 0, 5), Vector3(8, 0, -5), Vector3(-8, 0, -5),
+		Vector3(50, 0, 12), Vector3(-50, 0, -12), Vector3(100, 0, 50), Vector3(-100, 0, -50),
 	]
 	for bp in bench_positions:
 		_add_bench(bp)
@@ -728,7 +802,7 @@ func create_traffic_cones():
 
 # ═══════════════════════ BUS STOPS ═══════════════════════
 func create_bus_stops():
-	var positions = [Vector3(22, 0, 6), Vector3(-22, 0, -6), Vector3(44, 0, 6)]
+	var positions = [Vector3(50, 0, 8), Vector3(-50, 0, -8), Vector3(100, 0, 8)]
 	for pos in positions:
 		var stop = Node3D.new()
 		stop.position = pos
@@ -776,52 +850,190 @@ func create_bus_stops():
 # ═══════════════════════ LANE MARKINGS ═══════════════════════
 func create_lane_markings():
 	var dash_mat = _make_mat(Color(0.95, 0.95, 0.95))
-	# White dashed center line down every street
-	for i in range(-5, 6):
-		# N-S roads: dashes every 4 units
-		for j in range(-24, 25):
+	# White dashed lane lines on each road
+	for i in range(-8, 9):
+		# N-S roads: dashes every 8 units
+		for j in range(-25, 26):
 			var mi = MeshInstance3D.new()
 			var bm = BoxMesh.new()
-			bm.size = Vector3(0.12, 0.02, 2.0)
+			bm.size = Vector3(0.15, 0.02, 3.0)
 			bm.material = dash_mat
 			mi.mesh = bm
-			mi.position = Vector3(float(i) * 22, 0.18, float(j) * 4.0)
+			mi.position = Vector3(float(i) * 50, 0.18, float(j) * 8.0)
 			add_child(mi)
-		# E-W roads: dashes every 4 units
-		for j in range(-24, 25):
+		# E-W roads: dashes every 8 units
+		for j in range(-25, 26):
 			var mi = MeshInstance3D.new()
 			var bm = BoxMesh.new()
-			bm.size = Vector3(2.0, 0.02, 0.12)
+			bm.size = Vector3(3.0, 0.02, 0.15)
 			bm.material = dash_mat
 			mi.mesh = bm
-			mi.position = Vector3(float(j) * 4.0, 0.18, float(i) * 22)
+			mi.position = Vector3(float(j) * 8.0, 0.18, float(i) * 50)
 			add_child(mi)
 
 # ═══════════════════════ CROSSWALKS ═══════════════════════
 func create_crosswalks():
 	var cw_mat = _make_mat(Color(0.9, 0.9, 0.9, 0.8))
-	# At every road intersection, add a crosswalk
-	for ix in range(-4, 5):
-		for iz in range(-4, 5):
-			var center = Vector3(ix * 22.0, 0.19, iz * 22.0)
-			# Crosswalk strips — N side (Z+)
-			for stripe in range(5):
+	# At every 3rd intersection
+	for ix in range(-8, 9):
+		for iz in range(-8, 9):
+			if (ix + iz) % 3 != 0:
+				continue
+			var center = Vector3(ix * 50.0, 0.19, iz * 50.0)
+			for stripe in range(4):
 				var mi = MeshInstance3D.new()
 				var bm = BoxMesh.new()
-				bm.size = Vector3(3.5, 0.01, 0.45)
+				bm.size = Vector3(6.0, 0.01, 0.55)
 				bm.material = cw_mat
 				mi.mesh = bm
-				mi.position = center + Vector3(0, 0, 3.6 + stripe * 0.9)
+				mi.position = center + Vector3(0, 0, 5.0 + stripe * 1.5)
 				add_child(mi)
-			# Crosswalk strips — E side (X+)
-			for stripe in range(5):
+			for stripe in range(4):
 				var mi = MeshInstance3D.new()
 				var bm = BoxMesh.new()
-				bm.size = Vector3(0.45, 0.01, 3.5)
+				bm.size = Vector3(0.55, 0.01, 6.0)
 				bm.material = cw_mat
 				mi.mesh = bm
-				mi.position = center + Vector3(3.6 + stripe * 0.9, 0, 0)
+				mi.position = center + Vector3(5.0 + stripe * 1.5, 0, 0)
 				add_child(mi)
+
+# ═══════════════════════ OCEAN & BEACH ═══════════════════════
+func create_ocean_and_beach():
+	# Large ocean on the south side of the map
+	var ocean = MeshInstance3D.new()
+	var om = PlaneMesh.new()
+	om.size = Vector2(1000, 250)
+	var ocean_mat = StandardMaterial3D.new()
+	ocean_mat.albedo_color = Color(0.04, 0.18, 0.42, 0.88)
+	ocean_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ocean_mat.roughness = 0.02
+	ocean_mat.metallic = 0.15
+	om.material = ocean_mat
+	ocean.mesh = om
+	ocean.position = Vector3(0, -0.1, 260)
+	add_child(ocean)
+
+	# Beach sand strip
+	var sand = MeshInstance3D.new()
+	var sandm = BoxMesh.new()
+	sandm.size = Vector3(600, 0.2, 50)
+	sandm.material = _make_mat(Color(0.92, 0.85, 0.65), 0.95)
+	sand.mesh = sandm
+	sand.position = Vector3(0, 0.05, 165)
+	add_child(sand)
+
+	# Palm trees along beach
+	for i in range(20):
+		var px = randf_range(-220, 220)
+		_add_palm_tree(Vector3(px, 0, 145 + randf_range(0, 30)))
+
+	# Beach umbrellas
+	var umbrella_colors = [Color(0.9, 0.2, 0.2), Color(0.2, 0.6, 0.9), Color(0.9, 0.8, 0.2), Color(0.2, 0.8, 0.3), Color(0.9, 0.5, 0.1)]
+	for i in range(8):
+		var ux = randf_range(-100, 100)
+		var uz = 125 + randf_range(0, 18)
+		var pole = MeshInstance3D.new()
+		var pm = CylinderMesh.new()
+		pm.height = 2.5
+		pm.top_radius = 0.04
+		pm.bottom_radius = 0.05
+		pm.material = _make_mat(Color(0.45, 0.35, 0.2))
+		pole.mesh = pm
+		pole.position = Vector3(ux, 1.35, uz)
+		add_child(pole)
+		var top = MeshInstance3D.new()
+		var tm = CylinderMesh.new()
+		tm.top_radius = 0.1
+		tm.bottom_radius = 1.8
+		tm.height = 0.4
+		tm.material = _make_mat(umbrella_colors[i % umbrella_colors.size()])
+		top.mesh = tm
+		top.position = Vector3(ux, 2.7, uz)
+		add_child(top)
+
+	# Beach towels (colored flat boxes)
+	for i in range(6):
+		var towel = MeshInstance3D.new()
+		var twm = BoxMesh.new()
+		twm.size = Vector3(1.0, 0.02, 2.0)
+		var towel_colors = [Color(0.9, 0.3, 0.3), Color(0.3, 0.3, 0.9), Color(0.3, 0.9, 0.3), Color(0.9, 0.9, 0.3)]
+		twm.material = _make_mat(towel_colors[i % towel_colors.size()])
+		towel.mesh = twm
+		towel.position = Vector3(randf_range(-80, 80), 0.16, 130 + randf_range(0, 12))
+		towel.rotation.y = randf_range(0, TAU)
+		add_child(towel)
+
+	# Lifeguard tower on beach
+	_add_lifeguard_tower(Vector3(30, 0, 140))
+	_add_lifeguard_tower(Vector3(-60, 0, 140))
+
+func _add_palm_tree(pos: Vector3):
+	var tree = Node3D.new()
+	tree.position = pos
+	var trunk_h = randf_range(6, 10)
+	var trunk = MeshInstance3D.new()
+	var tm = CylinderMesh.new()
+	tm.top_radius = 0.12
+	tm.bottom_radius = 0.25
+	tm.height = trunk_h
+	tm.material = _make_mat(Color(0.45, 0.32, 0.18))
+	trunk.mesh = tm
+	trunk.position.y = trunk_h / 2.0
+	# Slight lean
+	trunk.rotation.x = randf_range(-0.1, 0.1)
+	trunk.rotation.z = randf_range(-0.1, 0.1)
+	tree.add_child(trunk)
+	# Palm fronds (flat green cones)
+	for f in range(5):
+		var frond = MeshInstance3D.new()
+		var fm = CylinderMesh.new()
+		fm.top_radius = 0.0
+		fm.bottom_radius = 2.5
+		fm.height = 0.3
+		fm.material = _make_mat(Color(0.12, 0.55, 0.15))
+		frond.mesh = fm
+		frond.position.y = trunk_h + 0.5
+		frond.rotation.x = randf_range(-0.3, 0.3)
+		frond.rotation.z = f * (TAU / 5.0)
+		tree.add_child(frond)
+	add_child(tree)
+
+func _add_lifeguard_tower(pos: Vector3):
+	var tower = Node3D.new()
+	tower.position = pos
+	for lx in [-1, 1]:
+		for lz in [-1, 1]:
+			var leg = MeshInstance3D.new()
+			var lm = CylinderMesh.new()
+			lm.height = 3.0
+			lm.top_radius = 0.08
+			lm.bottom_radius = 0.1
+			lm.material = _make_mat(Color(0.75, 0.55, 0.35))
+			leg.mesh = lm
+			leg.position = Vector3(lx * 1.2, 1.5, lz * 1.2)
+			tower.add_child(leg)
+	var platform = MeshInstance3D.new()
+	var pfm = BoxMesh.new()
+	pfm.size = Vector3(3, 0.15, 3)
+	pfm.material = _make_mat(Color(0.75, 0.55, 0.35))
+	platform.mesh = pfm
+	platform.position.y = 3.1
+	tower.add_child(platform)
+	var cabin = MeshInstance3D.new()
+	var cbm = BoxMesh.new()
+	cbm.size = Vector3(2.8, 2.2, 2.8)
+	cbm.material = _make_mat(Color(0.85, 0.75, 0.6))
+	cabin.mesh = cbm
+	cabin.position.y = 4.3
+	tower.add_child(cabin)
+	var stripe = MeshInstance3D.new()
+	var stm = BoxMesh.new()
+	stm.size = Vector3(2.9, 0.4, 0.08)
+	stm.material = _make_mat(Color(0.9, 0.15, 0.1))
+	stripe.mesh = stm
+	stripe.position = Vector3(0, 4.5, 1.45)
+	tower.add_child(stripe)
+	add_child(tower)
 
 # ═══════════════════════ DISTRICTS ═══════════════════════
 func create_districts():
@@ -833,6 +1045,10 @@ func create_districts():
 	_create_beach_area()
 	_create_stadium()
 	_create_parking_lots()
+	_create_highway()
+	_create_la_river()
+	_create_bridges()
+	_create_hollywood_sign()
 
 func _create_harbor_district():
 	# Harbor: south-west, around (-100, 0, -100)
@@ -1053,29 +1269,25 @@ func _create_downtown_extras():
 
 # ═══════════════════════ SIDEWALKS ═══════════════════════
 func create_sidewalks():
-	# Raised sidewalks along roads with collision to keep traffic on roads
 	var sw_mat = _make_mat(Color(0.58, 0.56, 0.52), 0.9)
-	for i in range(-5, 6):
+	for i in range(-8, 9):
 		for is_ns in [true, false]:
 			for side in [-1, 1]:
 				var body = StaticBody3D.new()
-				body.collision_layer = 1  # World layer
+				body.collision_layer = 1
 				body.collision_mask = 0
-				
 				var sw = MeshInstance3D.new()
 				var swm = BoxMesh.new()
 				var col = CollisionShape3D.new()
 				var box = BoxShape3D.new()
-				
 				if is_ns:
-					swm.size = Vector3(1.4, 0.18, 500)
-					box.size = Vector3(1.4, 0.18, 500)
-					body.position = Vector3(i * 22 + side * 3.0, 0.09, 0)
+					swm.size = Vector3(2.0, 0.18, 1200)
+					box.size = Vector3(2.0, 0.18, 1200)
+					body.position = Vector3(i * 50 + side * 5.5, 0.09, 0)
 				else:
-					swm.size = Vector3(500, 0.18, 1.4)
-					box.size = Vector3(500, 0.18, 1.4)
-					body.position = Vector3(0, 0.09, i * 22 + side * 3.0)
-				
+					swm.size = Vector3(1200, 0.18, 2.0)
+					box.size = Vector3(1200, 0.18, 2.0)
+					body.position = Vector3(0, 0.09, i * 50 + side * 5.5)
 				swm.material = sw_mat
 				sw.mesh = swm
 				col.shape = box
@@ -1089,16 +1301,18 @@ func setup_lighting():
 	sun.name = "Sun"
 	sun.light_energy = 1.6
 	sun.shadow_enabled = true
-	sun.shadow_blur = 1.0
-	sun.directional_shadow_max_distance = 250.0
-	sun.light_color = Color(1.0, 0.96, 0.88)
+	sun.shadow_blur = 1.5
+	sun.directional_shadow_max_distance = 100.0
+	# Vice City warm golden sunlight
+	sun.light_color = Color(1.0, 0.92, 0.78)
+	sun.rotation = Vector3(deg_to_rad(-50), deg_to_rad(-25), 0)
 	add_child(sun)
 	
-	# Add fill light for softer shadows
+	# Warm fill light (Vice City pink bounce)
 	var fill = DirectionalLight3D.new()
 	fill.name = "FillLight"
 	fill.light_energy = 0.3
-	fill.light_color = Color(0.7, 0.8, 1.0)
+	fill.light_color = Color(0.95, 0.75, 0.85)
 	fill.shadow_enabled = false
 	fill.rotation = Vector3(deg_to_rad(-30), deg_to_rad(120), 0)
 	add_child(fill)
@@ -1109,40 +1323,38 @@ func setup_sky():
 	env.background_mode = Environment.BG_SKY
 	var sky = Sky.new()
 	var proc_sky = ProceduralSkyMaterial.new()
-	proc_sky.sky_top_color = Color(0.12, 0.30, 0.70)
-	proc_sky.sky_horizon_color = Color(0.50, 0.65, 0.90)
-	proc_sky.ground_bottom_color = Color(0.15, 0.40, 0.15)
-	proc_sky.ground_horizon_color = Color(0.50, 0.60, 0.50)
+	# Vice City sunset palette — warm pinks, oranges, deep blue
+	proc_sky.sky_top_color = Color(0.12, 0.18, 0.55)
+	proc_sky.sky_horizon_color = Color(0.95, 0.55, 0.45)
+	proc_sky.ground_bottom_color = Color(0.15, 0.38, 0.18)
+	proc_sky.ground_horizon_color = Color(0.75, 0.50, 0.45)
 	proc_sky.sun_angle_max = 35.0
 	proc_sky.sun_curve = 0.08
 	sky.sky_material = proc_sky
 	env.sky = sky
 
-	# Ambient lighting from sky
+	# Warm ambient lighting — Vice City golden hour feel
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.6
+	env.ambient_light_energy = 0.9
 	env.ambient_light_sky_contribution = 1.0
 
-	# Tone mapping for cinematic look
+	# Tone mapping — punchy, saturated Vice City look
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_exposure = 1.1
 
-	# Glow/bloom for neon signs and lights
+	# Glow/bloom for neon signs and sunset
 	env.glow_enabled = true
-	env.glow_intensity = 0.6
+	env.glow_intensity = 0.5
 	env.glow_bloom = 0.15
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 
-	# Fog for depth/atmosphere
+	# Warm atmospheric fog
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.65, 0.72, 0.85)
-	env.fog_density = 0.0008
-	env.fog_aerial_perspective = 0.5
+	env.fog_light_color = Color(0.85, 0.65, 0.55)
+	env.fog_density = 0.0003
+	env.fog_aerial_perspective = 0.35
 
-	# SSAO for depth in shadows
-	env.ssao_enabled = true
-	env.ssao_radius = 1.5
-	env.ssao_intensity = 1.5
+	env.ssao_enabled = false
 
 	we.environment = env
 	add_child(we)
@@ -1535,3 +1747,336 @@ func _add_parked_car(pos: Vector3):
 	# Random rotation
 	car.rotation.y = randf_range(-0.1, 0.1) + (PI if randf() > 0.5 else 0)
 	add_child(car)
+
+# ═══════════════════════ HIGHWAY / FREEWAY ═══════════════════════
+func _create_highway():
+	# Elevated freeway loop around downtown (like LA's 110/101 interchange area)
+	# The freeway runs in a rectangular loop at ~120m from center, elevated 6m
+	var hw_mat = _make_mat(Color(0.22, 0.22, 0.24), 0.85)
+	var barrier_mat = _make_mat(Color(0.55, 0.55, 0.55), 0.7, 0.2)
+	var pillar_mat = _make_mat(Color(0.5, 0.5, 0.52), 0.7, 0.1)
+	var hw_y = 6.0
+	var hw_width = 8.0
+	var half_len = 180.0
+
+	# Four straight highway segments (N, S, E, W sides)
+	var segments = [
+		# [position, size, barrier_offset_axis]
+		[Vector3(0, hw_y, -half_len), Vector3(hw_width, 0.4, half_len * 2), "z"],
+		[Vector3(0, hw_y, half_len), Vector3(hw_width, 0.4, half_len * 2), "z"],
+		[Vector3(-half_len, hw_y, 0), Vector3(half_len * 2, 0.4, hw_width), "x"],
+		[Vector3(half_len, hw_y, 0), Vector3(half_len * 2, 0.4, hw_width), "x"],
+	]
+
+	# North side highway
+	var hw_n = StaticBody3D.new()
+	hw_n.position = Vector3(0, hw_y, -half_len)
+	var hw_n_mesh = MeshInstance3D.new()
+	var hw_n_box = BoxMesh.new()
+	hw_n_box.size = Vector3(half_len * 2, 0.4, hw_width)
+	hw_n_box.material = hw_mat
+	hw_n_mesh.mesh = hw_n_box
+	hw_n.add_child(hw_n_mesh)
+	var hw_n_col = CollisionShape3D.new()
+	hw_n_col.shape = BoxShape3D.new()
+	hw_n_col.shape.size = Vector3(half_len * 2, 0.4, hw_width)
+	hw_n.add_child(hw_n_col)
+	add_child(hw_n)
+
+	# South side highway
+	var hw_s = StaticBody3D.new()
+	hw_s.position = Vector3(0, hw_y, half_len - 40)
+	var hw_s_mesh = MeshInstance3D.new()
+	var hw_s_box = BoxMesh.new()
+	hw_s_box.size = Vector3(half_len * 2, 0.4, hw_width)
+	hw_s_box.material = hw_mat
+	hw_s_mesh.mesh = hw_s_box
+	hw_s.add_child(hw_s_mesh)
+	var hw_s_col = CollisionShape3D.new()
+	hw_s_col.shape = BoxShape3D.new()
+	hw_s_col.shape.size = Vector3(half_len * 2, 0.4, hw_width)
+	hw_s.add_child(hw_s_col)
+	add_child(hw_s)
+
+	# East side highway
+	var hw_e = StaticBody3D.new()
+	hw_e.position = Vector3(half_len, hw_y, -20)
+	var hw_e_mesh = MeshInstance3D.new()
+	var hw_e_box = BoxMesh.new()
+	hw_e_box.size = Vector3(hw_width, 0.4, half_len * 2 - 40)
+	hw_e_box.material = hw_mat
+	hw_e_mesh.mesh = hw_e_box
+	hw_e.add_child(hw_e_mesh)
+	var hw_e_col = CollisionShape3D.new()
+	hw_e_col.shape = BoxShape3D.new()
+	hw_e_col.shape.size = Vector3(hw_width, 0.4, half_len * 2 - 40)
+	hw_e.add_child(hw_e_col)
+	add_child(hw_e)
+
+	# West side highway
+	var hw_w = StaticBody3D.new()
+	hw_w.position = Vector3(-half_len, hw_y, -20)
+	var hw_w_mesh = MeshInstance3D.new()
+	var hw_w_box = BoxMesh.new()
+	hw_w_box.size = Vector3(hw_width, 0.4, half_len * 2 - 40)
+	hw_w_box.material = hw_mat
+	hw_w_mesh.mesh = hw_w_box
+	hw_w.add_child(hw_w_mesh)
+	var hw_w_col = CollisionShape3D.new()
+	hw_w_col.shape = BoxShape3D.new()
+	hw_w_col.shape.size = Vector3(hw_width, 0.4, half_len * 2 - 40)
+	hw_w.add_child(hw_w_col)
+	add_child(hw_w)
+
+	# Highway support pillars
+	for i in range(-8, 9):
+		for side_pos in [-half_len, half_len]:
+			# N-S pillars
+			var pillar = MeshInstance3D.new()
+			var pm = CylinderMesh.new()
+			pm.height = hw_y
+			pm.top_radius = 0.35
+			pm.bottom_radius = 0.45
+			pm.material = pillar_mat
+			pillar.mesh = pm
+			pillar.position = Vector3(i * 40, hw_y / 2.0, side_pos)
+			add_child(pillar)
+		for side_pos in [-half_len, half_len]:
+			# E-W pillars
+			var pillar = MeshInstance3D.new()
+			var pm = CylinderMesh.new()
+			pm.height = hw_y
+			pm.top_radius = 0.35
+			pm.bottom_radius = 0.45
+			pm.material = pillar_mat
+			pillar.mesh = pm
+			pillar.position = Vector3(side_pos, hw_y / 2.0, i * 40 - 20)
+			add_child(pillar)
+
+	# Highway barrier walls (concrete jersey barriers)
+	for z_off in [-half_len]:
+		for side in [-1, 1]:
+			var barrier = MeshInstance3D.new()
+			var bm = BoxMesh.new()
+			bm.size = Vector3(half_len * 2, 0.8, 0.3)
+			bm.material = barrier_mat
+			barrier.mesh = bm
+			barrier.position = Vector3(0, hw_y + 0.6, z_off + side * (hw_width / 2.0))
+			add_child(barrier)
+
+	# On/off ramps (sloped sections connecting ground to highway)
+	_add_highway_ramp(Vector3(-100, 0, -half_len), Vector3(-100, hw_y, -half_len), 0.0)
+	_add_highway_ramp(Vector3(100, 0, -half_len), Vector3(100, hw_y, -half_len), PI)
+	_add_highway_ramp(Vector3(-half_len, 0, -80), Vector3(-half_len, hw_y, -80), PI / 2)
+	_add_highway_ramp(Vector3(half_len, 0, -80), Vector3(half_len, hw_y, -80), -PI / 2)
+
+	# Highway lane markings (white dashes on elevated road)
+	var dash_mat = _make_mat(Color(0.95, 0.95, 0.95))
+	for i in range(-16, 17, 2):
+		var dm = MeshInstance3D.new()
+		var dbm = BoxMesh.new()
+		dbm.size = Vector3(2.0, 0.02, 0.12)
+		dbm.material = dash_mat
+		dm.mesh = dbm
+		dm.position = Vector3(i * 10.0, hw_y + 0.22, -half_len)
+		add_child(dm)
+
+func _add_highway_ramp(ground_pos: Vector3, hw_pos: Vector3, rot_y: float):
+	# Sloped ramp connecting ground level to highway
+	var ramp = StaticBody3D.new()
+	var mid = (ground_pos + hw_pos) / 2.0
+	mid.y = (ground_pos.y + hw_pos.y) / 2.0
+	ramp.position = mid
+
+	var ramp_len = ground_pos.distance_to(hw_pos) + 30.0
+	var mesh = MeshInstance3D.new()
+	var bm = BoxMesh.new()
+	bm.size = Vector3(6.0, 0.3, ramp_len)
+	bm.material = _make_mat(Color(0.22, 0.22, 0.24), 0.85)
+	mesh.mesh = bm
+	ramp.add_child(mesh)
+
+	var col = CollisionShape3D.new()
+	col.shape = BoxShape3D.new()
+	col.shape.size = Vector3(6.0, 0.3, ramp_len)
+	ramp.add_child(col)
+
+	# Angle the ramp upward
+	var angle = atan2(hw_pos.y - ground_pos.y, ramp_len)
+	ramp.rotation.x = -angle
+	ramp.rotation.y = rot_y
+	add_child(ramp)
+
+# ═══════════════════════ LA RIVER (CONCRETE CHANNEL) ═══════════════════════
+func _create_la_river():
+	# LA River: concrete channel running north-south at x = 110
+	var river_x = 110.0
+	var river_len = 800.0
+	var channel_width = 14.0
+	var channel_depth = 4.0
+	var concrete = _make_mat(Color(0.55, 0.53, 0.50), 0.9)
+	var water_level = -2.5
+
+	# Channel floor
+	var floor_body = StaticBody3D.new()
+	floor_body.position = Vector3(river_x, -channel_depth, 0)
+	var floor_mesh = MeshInstance3D.new()
+	var fbm = BoxMesh.new()
+	fbm.size = Vector3(channel_width - 1, 0.3, river_len)
+	fbm.material = concrete
+	floor_mesh.mesh = fbm
+	floor_body.add_child(floor_mesh)
+	var floor_col = CollisionShape3D.new()
+	floor_col.shape = BoxShape3D.new()
+	floor_col.shape.size = Vector3(channel_width - 1, 0.3, river_len)
+	floor_body.add_child(floor_col)
+	add_child(floor_body)
+
+	# Channel walls (both sides)
+	for side in [-1, 1]:
+		var wall = StaticBody3D.new()
+		wall.position = Vector3(river_x + side * channel_width / 2.0, -channel_depth / 2.0, 0)
+		var wm = MeshInstance3D.new()
+		var wbm = BoxMesh.new()
+		wbm.size = Vector3(0.5, channel_depth + 0.5, river_len)
+		wbm.material = concrete
+		wm.mesh = wbm
+		wall.add_child(wm)
+		var wcol = CollisionShape3D.new()
+		wcol.shape = BoxShape3D.new()
+		wcol.shape.size = Vector3(0.5, channel_depth + 0.5, river_len)
+		wall.add_child(wcol)
+		add_child(wall)
+
+	# Sloped embankments
+	for side in [-1, 1]:
+		var slope = MeshInstance3D.new()
+		var sm = BoxMesh.new()
+		sm.size = Vector3(3.0, 0.3, river_len)
+		sm.material = concrete
+		slope.mesh = sm
+		slope.position = Vector3(river_x + side * (channel_width / 2.0 + 1.5), -channel_depth / 2.0, 0)
+		slope.rotation.z = side * 0.5
+		add_child(slope)
+
+	# Water in channel
+	var water = MeshInstance3D.new()
+	var wpm = BoxMesh.new()
+	wpm.size = Vector3(channel_width - 2, 0.1, river_len)
+	var water_mat = StandardMaterial3D.new()
+	water_mat.albedo_color = Color(0.15, 0.30, 0.42, 0.75)
+	water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	water_mat.roughness = 0.02
+	wpm.material = water_mat
+	water.mesh = wpm
+	water.position = Vector3(river_x, water_level, 0)
+	add_child(water)
+
+	# Chain-link fence along the top of the channel
+	for side in [-1, 1]:
+		var fence = MeshInstance3D.new()
+		var fm = BoxMesh.new()
+		fm.size = Vector3(0.05, 2.0, river_len)
+		var fence_mat = StandardMaterial3D.new()
+		fence_mat.albedo_color = Color(0.5, 0.5, 0.5, 0.5)
+		fence_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		fence_mat.roughness = 0.4
+		fence_mat.metallic = 0.6
+		fm.material = fence_mat
+		fence.mesh = fm
+		fence.position = Vector3(river_x + side * (channel_width / 2.0 + 0.3), 1.0, 0)
+		add_child(fence)
+
+# ═══════════════════════ BRIDGES ═══════════════════════
+func _create_bridges():
+	# Bridges crossing the LA River at major road intersections
+	var river_x = 110.0
+	var bridge_roads = [-66.0, 0.0, 66.0, 132.0]  # Z positions of E-W roads crossing the river
+
+	for bz in bridge_roads:
+		_add_bridge(Vector3(river_x, 0, bz))
+
+func _add_bridge(pos: Vector3):
+	var bridge = StaticBody3D.new()
+	bridge.position = pos + Vector3(0, 0.5, 0)
+
+	# Bridge deck
+	var deck = MeshInstance3D.new()
+	var dm = BoxMesh.new()
+	dm.size = Vector3(22.0, 0.5, 8.0)
+	dm.material = _make_mat(Color(0.25, 0.25, 0.27), 0.8)
+	deck.mesh = dm
+	bridge.add_child(deck)
+
+	var col = CollisionShape3D.new()
+	col.shape = BoxShape3D.new()
+	col.shape.size = Vector3(22.0, 0.5, 8.0)
+	bridge.add_child(col)
+
+	# Bridge railings
+	for side in [-1, 1]:
+		var railing = MeshInstance3D.new()
+		var rm = BoxMesh.new()
+		rm.size = Vector3(22.0, 1.2, 0.15)
+		rm.material = _make_mat(Color(0.45, 0.45, 0.45), 0.6, 0.4)
+		railing.mesh = rm
+		railing.position = Vector3(0, 0.85, side * 3.9)
+		bridge.add_child(railing)
+
+	# Support pillars
+	for px in [-8, 0, 8]:
+		var pillar = MeshInstance3D.new()
+		var pm = CylinderMesh.new()
+		pm.height = 5.0
+		pm.top_radius = 0.4
+		pm.bottom_radius = 0.5
+		pm.material = _make_mat(Color(0.5, 0.48, 0.46), 0.7, 0.1)
+		pillar.mesh = pm
+		pillar.position = Vector3(px, -2.25, 0)
+		bridge.add_child(pillar)
+
+	add_child(bridge)
+
+# ═══════════════════════ HOLLYWOOD SIGN ═══════════════════════
+func _create_hollywood_sign():
+	# Iconic sign on a hillside in the northwest
+	var base = Vector3(-200, 0, -200)
+
+	# Hill (raised terrain)
+	var hill = StaticBody3D.new()
+	hill.position = base
+	var hill_mesh = MeshInstance3D.new()
+	var hm = CylinderMesh.new()
+	hm.top_radius = 40.0
+	hm.bottom_radius = 60.0
+	hm.height = 20.0
+	hm.material = _make_mat(Color(0.28, 0.45, 0.22), 0.9)
+	hill_mesh.mesh = hm
+	hill_mesh.position.y = 10.0
+	hill.add_child(hill_mesh)
+	var hill_col = CollisionShape3D.new()
+	hill_col.shape = CylinderShape3D.new()
+	hill_col.shape.radius = 50.0
+	hill_col.shape.height = 20.0
+	hill_col.position.y = 10.0
+	hill.add_child(hill_col)
+	add_child(hill)
+
+	# "GANGSTER TOWN" sign letters (white block letters on hillside)
+	var letters = "GANGSTERTOWN"
+	var letter_mat = StandardMaterial3D.new()
+	letter_mat.albedo_color = Color(0.95, 0.95, 0.95)
+	letter_mat.emission_enabled = true
+	letter_mat.emission = Color(1.0, 1.0, 1.0)
+	letter_mat.emission_energy_multiplier = 0.15
+
+	for i in range(letters.length()):
+		var letter = MeshInstance3D.new()
+		var lm = BoxMesh.new()
+		lm.size = Vector3(3.0, 5.0, 0.5)
+		lm.material = letter_mat
+		letter.mesh = lm
+		letter.position = base + Vector3(-22 + i * 4.0, 22.0, -15)
+		# Slight angle to face the city
+		letter.rotation.y = 0.3
+		add_child(letter)

@@ -61,7 +61,7 @@ func _generate_road_network() -> void:
 	road_connections.clear()
 	
 	var grid_size := 500.0
-	var road_spacing := 22.0
+	var road_spacing := 50.0
 	
 	# Generate nodes at intersections
 	var node_index := 0

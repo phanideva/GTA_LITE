@@ -11,19 +11,22 @@ var wander_direction = Vector3.ZERO
 var flee_target: Node3D = null
 var char_model: Node3D
 
-# Randomize appearance
+# LA-style civilian clothing — diverse US West Coast fashion
 var SHIRT_COLORS = [
-	Color(0.8, 0.2, 0.2), Color(0.2, 0.5, 0.8), Color(0.9, 0.9, 0.3),
-	Color(0.3, 0.7, 0.3), Color(0.7, 0.4, 0.1), Color(0.9, 0.5, 0.7),
-	Color(0.5, 0.5, 0.5), Color(1.0, 1.0, 1.0), Color(0.6, 0.1, 0.6),
+	Color(0.9, 0.9, 0.9), Color(0.1, 0.1, 0.1), Color(0.2, 0.5, 0.8),
+	Color(0.8, 0.2, 0.2), Color(0.9, 0.7, 0.1), Color(0.3, 0.7, 0.3),
+	Color(0.7, 0.4, 0.1), Color(0.5, 0.5, 0.5), Color(0.15, 0.25, 0.45),
+	Color(0.65, 0.55, 0.45), Color(0.85, 0.75, 0.6), Color(0.4, 0.6, 0.7),
 ]
 var PANTS_COLORS = [
-	Color(0.15, 0.15, 0.3), Color(0.3, 0.2, 0.1), Color(0.1, 0.1, 0.1),
-	Color(0.4, 0.35, 0.3), Color(0.2, 0.2, 0.2),
+	Color(0.15, 0.15, 0.3), Color(0.2, 0.18, 0.15), Color(0.1, 0.1, 0.1),
+	Color(0.35, 0.32, 0.28), Color(0.22, 0.22, 0.22), Color(0.5, 0.45, 0.38),
+	Color(0.15, 0.2, 0.35),
 ]
 var SKIN_TONES = [
 	Color(0.95, 0.82, 0.68), Color(0.87, 0.72, 0.55), Color(0.72, 0.55, 0.40),
-	Color(0.55, 0.38, 0.26), Color(0.40, 0.28, 0.18),
+	Color(0.55, 0.38, 0.26), Color(0.40, 0.28, 0.18), Color(0.82, 0.68, 0.50),
+	Color(0.92, 0.78, 0.62),
 ]
 
 func _ready():
@@ -36,15 +39,7 @@ func _ready():
 	choose_new_direction()
 
 func _build_model():
-	var CharModel = load("res://scripts/utils/character_model.gd")
-	char_model = Node3D.new()
-	char_model.set_script(CharModel)
-	char_model.skin_color = SKIN_TONES[randi() % SKIN_TONES.size()]
-	char_model.shirt_color = SHIRT_COLORS[randi() % SHIRT_COLORS.size()]
-	char_model.pants_color = PANTS_COLORS[randi() % PANTS_COLORS.size()]
-	char_model.shoe_color = Color(0.15, 0.1, 0.05)
-	var hair_choices = [Color(0.1, 0.07, 0.03), Color(0.6, 0.4, 0.15), Color(0.8, 0.7, 0.3), Color(0.2, 0.1, 0.05)]
-	char_model.hair_color = hair_choices[randi() % hair_choices.size()]
+	char_model = CharacterModel.create_random_civilian()
 	add_child(char_model)
 	char_model.build()
 
@@ -85,12 +80,12 @@ func _physics_process(delta):
 	move_and_slide()
 
 func choose_new_direction():
-	# Walk along sidewalks (parallel to road grid at offset of ~4 units from road center)
-	# Roads run at multiples of 22, so sidewalks are at those positions +/- 4
+	# Walk along sidewalks (parallel to road grid at offset of ~6 units from road center)
+	# Roads run at multiples of 50, so sidewalks are at those positions +/- 6
 	var pos = global_position
 	# Snap to nearest road direction and walk along it
-	var nearest_road_x = round(pos.x / 22.0) * 22.0
-	var nearest_road_z = round(pos.z / 22.0) * 22.0
+	var nearest_road_x = round(pos.x / 50.0) * 50.0
+	var nearest_road_z = round(pos.z / 50.0) * 50.0
 	var dist_to_x_road = abs(pos.x - nearest_road_x)
 	var dist_to_z_road = abs(pos.z - nearest_road_z)
 
@@ -101,9 +96,9 @@ func choose_new_direction():
 		# Near a Z-aligned road, walk east/west along it
 		wander_direction = Vector3([-1.0, 1.0][randi() % 2], 0, 0)
 
-	# Keep within city bounds
-	if abs(pos.x) > 80: wander_direction.x = -sign(pos.x)
-	if abs(pos.z) > 80: wander_direction.z = -sign(pos.z)
+	# Keep within expanded LA city bounds
+	if abs(pos.x) > 400: wander_direction.x = -sign(pos.x)
+	if abs(pos.z) > 400: wander_direction.z = -sign(pos.z)
 	wander_direction = wander_direction.normalized()
 	wander_timer = randf_range(4.0, 10.0)
 

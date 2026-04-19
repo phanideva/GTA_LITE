@@ -85,9 +85,19 @@ func _add_mesh(parent: Node3D, mesh: Mesh,
 
 # ─────────────────────────────────────────────────────
 func build():
+	# Apply body shape based on gender/type
+	if is_female:
+		# Slightly different proportions
+		shirt_color = shirt_color if shirt_color != Color(0.3, 0.3, 0.8) else [Color(0.8, 0.2, 0.4), Color(0.9, 0.7, 0.2), Color(0.3, 0.7, 0.6), Color(0.7, 0.3, 0.7), Color(0.2, 0.5, 0.8)][randi() % 5]
+
 	# Wrapper node that bobs during walk
 	body_node = Node3D.new()
 	body_node.name = "Body"
+	if is_female:
+		body_node.scale = Vector3(0.88, 0.92, 0.88)
+	elif body_type == 1:
+		# Athletic / heroic build — wider shoulders, thicker
+		body_node.scale = Vector3(1.15, 1.0, 1.1)
 	add_child(body_node)
 
 	_build_legs()
@@ -669,44 +679,45 @@ func reset_pose():
 static func create_random_civilian() -> CharacterModel:
 	var model = CharacterModel.new()
 	
-	# Random skin tones
+	# 45% chance female
+	model.is_female = randf() < 0.45
+	model.body_type = randi() % 3  # 0=average, 1=athletic, 2=heavy
+	
+	# Random skin tones (diverse)
 	var skin_tones = [
 		Color(0.95, 0.80, 0.68),   # Light
 		Color(0.87, 0.72, 0.58),   # Medium light
 		Color(0.75, 0.58, 0.42),   # Tan
 		Color(0.55, 0.38, 0.28),   # Medium brown
 		Color(0.40, 0.28, 0.20),   # Dark brown
+		Color(0.82, 0.68, 0.55),   # Olive
+		Color(0.92, 0.78, 0.62),   # Peach
 	]
 	model.skin_color = skin_tones[randi() % skin_tones.size()]
 	
 	# Random shirt colors
 	var shirt_colors = [
-		Color(0.85, 0.85, 0.85),  # White
-		Color(0.15, 0.15, 0.15),  # Black
-		Color(0.70, 0.20, 0.20),  # Red
-		Color(0.20, 0.40, 0.70),  # Blue
-		Color(0.25, 0.55, 0.25),  # Green
-		Color(0.75, 0.65, 0.20),  # Yellow
-		Color(0.50, 0.25, 0.55),  # Purple
+		Color(0.85, 0.85, 0.85), Color(0.15, 0.15, 0.15),
+		Color(0.70, 0.20, 0.20), Color(0.20, 0.40, 0.70),
+		Color(0.25, 0.55, 0.25), Color(0.75, 0.65, 0.20),
+		Color(0.50, 0.25, 0.55), Color(0.9, 0.45, 0.15),
+		Color(0.1, 0.55, 0.55), Color(0.8, 0.3, 0.5),
 	]
 	model.shirt_color = shirt_colors[randi() % shirt_colors.size()]
 	
 	# Random pants colors
 	var pants_colors = [
-		Color(0.15, 0.15, 0.30),  # Dark blue jeans
-		Color(0.10, 0.10, 0.10),  # Black
-		Color(0.35, 0.30, 0.20),  # Khaki
-		Color(0.20, 0.18, 0.15),  # Dark brown
+		Color(0.15, 0.15, 0.30), Color(0.10, 0.10, 0.10),
+		Color(0.35, 0.30, 0.20), Color(0.20, 0.18, 0.15),
+		Color(0.25, 0.25, 0.35), Color(0.4, 0.35, 0.25),
 	]
 	model.pants_color = pants_colors[randi() % pants_colors.size()]
 	
 	# Random hair colors
 	var hair_colors = [
-		Color(0.12, 0.08, 0.05),  # Black
-		Color(0.30, 0.18, 0.08),  # Brown
-		Color(0.75, 0.55, 0.25),  # Blonde
-		Color(0.45, 0.20, 0.10),  # Auburn
-		Color(0.50, 0.50, 0.52),  # Gray
+		Color(0.12, 0.08, 0.05), Color(0.30, 0.18, 0.08),
+		Color(0.75, 0.55, 0.25), Color(0.45, 0.20, 0.10),
+		Color(0.50, 0.50, 0.52), Color(0.65, 0.40, 0.15),
 	]
 	model.hair_color = hair_colors[randi() % hair_colors.size()]
 	

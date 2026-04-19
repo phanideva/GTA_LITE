@@ -6,14 +6,13 @@ var mission_system: Node
 var economy: Node
 var save_system: Node
 var world: Node3D
+var intro_music_player: AudioStreamPlayer = null
 
 func _ready():
 	await get_tree().process_frame
-
 	player = $Player
 	world  = $World
 	world.add_to_group("world_environment")
-
 	Globals.player = player
 
 	mission_system = Node.new()
@@ -44,38 +43,26 @@ func _ready():
 	print("WASD: Move | Mouse: Look | LMB: Shoot | F: Melee | E: Enter Vehicle")
 	print("1/2/3/4: Switch Weapon | Space: Jump | Shift: Sprint")
 	print("M: Start Next Mission | Alt+S: Save | Alt+L: Load")
-	
-	# Start ambient sounds
-	SFX.start_ambient()
 
-	# Wire the cutscene system to the mission system dialogue calls
 	mission_system.connect("mission_started", _on_mission_started)
 	mission_system.connect("mission_completed", _on_mission_completed)
 
-	# Cinematic game start overlay
-	_show_game_intro()
+	Globals.game_state = "playing"
 
-	# Show initial mission prompt on HUD after a short delay
-	await get_tree().create_timer(4.5).timeout
+	await get_tree().create_timer(1.0).timeout
 	for hud in get_tree().get_nodes_in_group("hud"):
 		if hud.has_method("update_mission"):
 			hud.update_mission("Press M to start: " + mission_system.story_missions[0]["title"])
 
-var bird_timer = 0.0
 var intro_overlay: Control = null
-var intro_music_player: AudioStreamPlayer = null
 
 func _show_game_intro():
-	# Play intro music
 	_play_intro_music()
-	
-	# Cinematic overlay when entering the game world
 	intro_overlay = Control.new()
 	intro_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	intro_overlay.z_index = 100
 	add_child(intro_overlay)
 
-	# Letterbox bars (cinematic)
 	var top_bar = ColorRect.new()
 	top_bar.color = Color.BLACK
 	top_bar.position = Vector2(0, 0)
@@ -88,14 +75,12 @@ func _show_game_intro():
 	bottom_bar.size = Vector2(1920, 120)
 	intro_overlay.add_child(bottom_bar)
 
-	# GTA-style logo/title
 	var logo_container = Control.new()
 	logo_container.set_anchors_preset(Control.PRESET_CENTER)
 	logo_container.position = Vector2(-350, -180)
 	logo_container.size = Vector2(700, 300)
 	intro_overlay.add_child(logo_container)
-	
-	# Title text - stylized
+
 	var title_shadow = Label.new()
 	title_shadow.text = "GANGSTER TOWN"
 	title_shadow.add_theme_font_size_override("font_size", 72)
@@ -104,7 +89,7 @@ func _show_game_intro():
 	title_shadow.size = Vector2(700, 100)
 	title_shadow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	logo_container.add_child(title_shadow)
-	
+
 	var title = Label.new()
 	title.text = "GANGSTER TOWN"
 	title.add_theme_font_size_override("font_size", 72)
@@ -113,8 +98,7 @@ func _show_game_intro():
 	title.size = Vector2(700, 100)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	logo_container.add_child(title)
-	
-	# Subtitle - "ADVENTURES"
+
 	var subtitle_shadow = Label.new()
 	subtitle_shadow.text = "ADVENTURES"
 	subtitle_shadow.add_theme_font_size_override("font_size", 36)
@@ -123,7 +107,7 @@ func _show_game_intro():
 	subtitle_shadow.size = Vector2(700, 50)
 	subtitle_shadow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	logo_container.add_child(subtitle_shadow)
-	
+
 	var subtitle = Label.new()
 	subtitle.text = "ADVENTURES"
 	subtitle.add_theme_font_size_override("font_size", 36)
@@ -133,7 +117,6 @@ func _show_game_intro():
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	logo_container.add_child(subtitle)
 
-	# Location text (GTA-style)
 	var location = Label.new()
 	location.text = "Liberty District"
 	location.add_theme_font_size_override("font_size", 28)
@@ -154,34 +137,23 @@ func _show_game_intro():
 	tagline.size = Vector2(400, 30)
 	intro_overlay.add_child(tagline)
 
-	# Animation sequence
 	var tween = create_tween()
-	
-	# Fade in title with shadow
-	tween.tween_method(func(a): 
+	tween.tween_method(func(a):
 		title.add_theme_color_override("font_color", Color(0.95, 0.75, 0.1, a))
 		title_shadow.add_theme_color_override("font_color", Color(0.0, 0.0, 0.0, a * 0.6))
 	, 0.0, 1.0, 1.5)
-	
-	# Fade in subtitle
-	tween.tween_method(func(a): 
+	tween.tween_method(func(a):
 		subtitle.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95, a))
 		subtitle_shadow.add_theme_color_override("font_color", Color(0.0, 0.0, 0.0, a * 0.5))
 	, 0.0, 1.0, 0.8)
-	
-	# Show location
 	tween.tween_interval(0.5)
-	tween.tween_method(func(a): 
+	tween.tween_method(func(a):
 		location.add_theme_color_override("font_color", Color(0.8, 0.8, 0.85, a))
 	, 0.0, 1.0, 0.6)
-	tween.tween_method(func(a): 
+	tween.tween_method(func(a):
 		tagline.add_theme_color_override("font_color", Color(0.7, 0.7, 0.75, a))
 	, 0.0, 1.0, 0.5)
-	
-	# Hold for dramatic effect
 	tween.tween_interval(3.0)
-	
-	# Fade out everything
 	tween.tween_method(func(a):
 		title.add_theme_color_override("font_color", Color(0.95, 0.75, 0.1, a))
 		title_shadow.add_theme_color_override("font_color", Color(0.0, 0.0, 0.0, a * 0.6))
@@ -192,8 +164,7 @@ func _show_game_intro():
 		top_bar.color.a = a
 		bottom_bar.color.a = a
 	, 1.0, 0.0, 1.5)
-	
-	tween.tween_callback(func(): 
+	tween.tween_callback(func():
 		intro_overlay.queue_free()
 		_fade_out_intro_music()
 	)
@@ -219,133 +190,151 @@ func _fade_out_intro_music():
 		)
 
 func _process(_delta):
-	# Ambient bird chirps at random intervals
-	bird_timer -= _delta
-	if bird_timer <= 0:
-		SFX.play_ambient_bird()
-		bird_timer = randf_range(8.0, 25.0)
-
 	if Input.is_action_just_pressed("start_mission"):
-		# Start the next story mission (sequential)
 		if not mission_system.start_mission(0):
 			print("Mission already active or story complete!")
-
 	if Input.is_action_just_pressed("save"):
 		save_system.save_game()
 		print("Saved!")
-
 	if Input.is_action_just_pressed("load"):
 		save_system.load_game()
 		print("Loaded!")
 
-func _on_mission_started(title: String):
-	# Use new cutscene system for mission intro title card
+func _on_mission_started(mtitle: String):
 	if Cutscene:
-		Cutscene.show_mission_title(title)
+		Cutscene.show_mission_title(mtitle)
 
-func _on_mission_completed(title: String, reward: int):
+func _on_mission_completed(mtitle: String, reward: int):
 	SFX.play_sfx("mission_complete")
 	for hud in get_tree().get_nodes_in_group("hud"):
 		if hud.has_method("show_mission_complete"):
-			hud.show_mission_complete(title, reward)
+			hud.show_mission_complete(mtitle, reward)
+
+# ======= SPAWN FUNCTIONS =======
 
 func spawn_npcs():
+	print("[SPAWN] Starting NPC spawn...")
 	var scene = load("res://scenes/ai/pedestrian.tscn")
-	# Spawn pedestrians on sidewalks along roads
+	if not scene:
+		push_error("[SPAWN] Failed to load pedestrian.tscn!")
+		return
 	var sidewalk_spots = []
-	for i in range(-3, 4):
-		for j in range(-3, 4):
-			# Place near road intersections on the sidewalk (offset from road center)
-			# Y=0.5 to let them fall gently to ground
-			sidewalk_spots.append(Vector3(i * 22 + 4, 0.5, j * 22 + 4))
-			sidewalk_spots.append(Vector3(i * 22 - 4, 0.5, j * 22 - 4))
+	for i in range(-7, 8):
+		for j in range(-7, 8):
+			sidewalk_spots.append(Vector3(i * 50 + 6, 0.5, j * 50 + 6))
+			sidewalk_spots.append(Vector3(i * 50 - 6, 0.5, j * 50 - 6))
 	sidewalk_spots.shuffle()
-	for i in range(min(20, sidewalk_spots.size())):
+	var count = mini(40, sidewalk_spots.size())
+	for i in range(count):
 		var npc = scene.instantiate()
 		add_child(npc)
 		npc.global_position = sidewalk_spots[i]
+	print("[SPAWN] Spawned %d pedestrians" % count)
 
 func spawn_police():
+	print("[SPAWN] Starting police spawn...")
 	var scene = load("res://scenes/ai/police.tscn")
-	for i in range(3):
+	if not scene:
+		push_error("[SPAWN] Failed to load police.tscn!")
+		return
+	for i in range(10):
 		var cop = scene.instantiate()
 		add_child(cop)
-		var x = randf_range(20, 70) * (1 if randi() % 2 == 0 else -1)
-		var z = randf_range(20, 70) * (1 if randi() % 2 == 0 else -1)
+		var x = randf_range(20, 200) * (1 if randi() % 2 == 0 else -1)
+		var z = randf_range(20, 200) * (1 if randi() % 2 == 0 else -1)
 		cop.global_position = Vector3(x, 0.5, z)
+	print("[SPAWN] Spawned 100 police")
 
 func spawn_gangsters():
+	print("[SPAWN] Starting gangster spawn...")
 	var scene = load("res://scenes/ai/gangster.tscn")
-	for i in range(5):
+	if not scene:
+		push_error("[SPAWN] Failed to load gangster.tscn!")
+		return
+	for i in range(15):
 		var g = scene.instantiate()
 		add_child(g)
-		# Place gangsters far from player spawn (avoid near origin)
-		var x = randf_range(30, 80) * (1 if randi() % 2 == 0 else -1)
-		var z = randf_range(30, 80) * (1 if randi() % 2 == 0 else -1)
+		var x = randf_range(30, 200) * (1 if randi() % 2 == 0 else -1)
+		var z = randf_range(30, 200) * (1 if randi() % 2 == 0 else -1)
 		g.global_position = Vector3(x, 0.5, z)
 		g.connect("tree_exited", _on_enemy_killed)
+	print("[SPAWN] Spawned 15 gangsters")
 
 func spawn_traffic():
+	print("[SPAWN] Starting traffic spawn...")
 	var scene = load("res://scenes/vehicles/traffic.tscn")
-	# Spawn traffic on actual road grid (roads are at multiples of 22)
-	var road_starts = [
-		# North-South roads
-		{"pos": Vector3(0, 0.5, -60), "axis": "ns"},
-		{"pos": Vector3(22, 0.5, 60), "axis": "ns"},
-		{"pos": Vector3(-22, 0.5, -40), "axis": "ns"},
-		{"pos": Vector3(44, 0.5, 30), "axis": "ns"},
-		{"pos": Vector3(-44, 0.5, -20), "axis": "ns"},
-		# East-West roads
-		{"pos": Vector3(-60, 0.5, 0), "axis": "ew"},
-		{"pos": Vector3(50, 0.5, 22), "axis": "ew"},
-		{"pos": Vector3(-40, 0.5, -22), "axis": "ew"},
-		{"pos": Vector3(30, 0.5, 44), "axis": "ew"},
-		{"pos": Vector3(-30, 0.5, -44), "axis": "ew"},
-	]
+	if not scene:
+		push_error("[SPAWN] Failed to load traffic.tscn!")
+		return
+	var road_starts = []
+	for road_x_idx in range(-6, 7, 2):
+		var road_x = road_x_idx * 50
+		var lane_offset = 2.0 if randi() % 2 == 0 else -2.0
+		var start_z = randf_range(-250, 250)
+		road_starts.append({"pos": Vector3(road_x + lane_offset, 0.2, start_z), "axis": "ns"})
+	for road_z_idx in range(-6, 7, 2):
+		var road_z = road_z_idx * 50
+		var lane_offset = 2.0 if randi() % 2 == 0 else -2.0
+		var start_x = randf_range(-250, 250)
+		road_starts.append({"pos": Vector3(start_x, 0.2, road_z + lane_offset), "axis": "ew"})
 	for rd in road_starts:
 		var car = scene.instantiate()
 		add_child(car)
 		car.global_position = rd["pos"]
 		car.road_axis = rd["axis"]
+	print("[SPAWN] Spawned %d traffic vehicles" % road_starts.size())
 
 func spawn_vehicles():
+	print("[SPAWN] Starting vehicle spawn...")
 	var scene = load("res://scenes/vehicles/vehicle.tscn")
-	# Park vehicles near sidewalks/buildings with varied positions
-	# First vehicle VERY close to player spawn (22, 1, 22) for easy testing
-	var positions = [
-		Vector3(26, 0.5, 22),   # Right next to player spawn!
-		Vector3(25, 0.5, 18), Vector3(-18, 0.5, 25),
-		Vector3(47, 0.5, -20), Vector3(-25, 0.5, -35),
-		Vector3(50, 0.5, 45), Vector3(-50, 0.5, -18),
-		Vector3(15, 0.5, 48), Vector3(-40, 0.5, 40),
-		Vector3(65, 0.5, 10), Vector3(-65, 0.5, -10),
-		Vector3(30, 0.5, -55), Vector3(-30, 0.5, 55),
-	]
-	for pos in positions:
+	if not scene:
+		push_error("[SPAWN] Failed to load vehicle.tscn!")
+		return
+	var positions = []
+	for road_idx in range(-7, 8):
+		var road_x = road_idx * 50
+		for offset_z in [-40, -15, 15, 40, 70, -70, 100, -100]:
+			if randi() % 3 != 0:
+				var side = 4.8 if randi() % 2 == 0 else -4.8
+				positions.append(Vector3(road_x + side, 0.2, offset_z))
+	for road_idx in range(-7, 8):
+		var road_z = road_idx * 50
+		for offset_x in [-40, -15, 15, 40, 70, -70, 100, -100]:
+			if randi() % 3 != 0:
+				var side = 4.8 if randi() % 2 == 0 else -4.8
+				positions.append(Vector3(offset_x, 0.2, road_z + side))
+	positions.shuffle()
+	var count = mini(30, positions.size())
+	for i in range(count):
+		var pos = positions[i]
 		var car = scene.instantiate()
 		add_child(car)
 		car.global_position = pos
-		car.rotation.y = [0, PI/2, PI, -PI/2][randi() % 4]
-	print("[VEHICLES] Spawned %d vehicles - closest at (26, 0.5, 22)" % positions.size())
+		if abs(fmod(pos.x, 50.0)) < 8.0:
+			car.rotation.y = 0
+		else:
+			car.rotation.y = PI / 2
+	print("[SPAWN] Spawned %d parked vehicles" % count)
 
 func spawn_motorcycles():
+	print("[SPAWN] Starting motorcycle spawn...")
 	var scene = load("res://scenes/vehicles/motorcycle.tscn")
-	# Motorcycles — parked near buildings
+	if not scene:
+		push_error("[SPAWN] Failed to load motorcycle.tscn!")
+		return
 	var moto_pos = [
-		Vector3(20, 0.5, 26), Vector3(-26, 0.5, 20),
-		Vector3(45, 0.5, -15), Vector3(-45, 0.5, 15),
-		Vector3(68, 0.5, 30),
+		Vector3(25.5, 0.15, 5), Vector3(-25.5, 0.15, -5),
+		Vector3(47.5, 0.15, -15), Vector3(-47.5, 0.15, 15),
+		Vector3(69.5, 0.15, 25), Vector3(-69.5, 0.15, 40),
 	]
 	for pos in moto_pos:
 		var bike = scene.instantiate()
 		add_child(bike)
 		bike.global_position = pos
 		bike.rotation.y = randf_range(0, TAU)
-	# Bicycles — near parks and sidewalks
 	var bike_pos = [
-		Vector3(8, 0.5, 10), Vector3(-10, 0.5, 8),
-		Vector3(30, 0.5, 30), Vector3(-30, 0.5, -30),
-		Vector3(55, 0.5, 50),
+		Vector3(8, 0.15, 12), Vector3(-10, 0.15, 8),
+		Vector3(5, 0.15, -8), Vector3(-5, 0.15, 10),
 	]
 	for pos in bike_pos:
 		var bicycle = scene.instantiate()
@@ -353,31 +342,45 @@ func spawn_motorcycles():
 		add_child(bicycle)
 		bicycle.global_position = pos
 		bicycle.rotation.y = randf_range(0, TAU)
+	print("[SPAWN] Spawned %d motorcycles + %d bicycles" % [moto_pos.size(), bike_pos.size()])
 
 func spawn_animals():
+	print("[SPAWN] Starting animal spawn...")
 	var scene = load("res://scenes/ai/animal.tscn")
-	# Dogs
-	for i in range(4):
+	if not scene:
+		push_error("[SPAWN] Failed to load animal.tscn!")
+		return
+	for i in range(8):
 		var dog = scene.instantiate()
 		dog.animal_type = "dog"
 		add_child(dog)
-		dog.global_position = Vector3(randf_range(-55, 55), 0.5, randf_range(-55, 55))
-	# Cats
-	for i in range(3):
+		dog.global_position = Vector3(randf_range(-150, 150), 0.5, randf_range(-150, 150))
+	for i in range(6):
 		var cat = scene.instantiate()
 		cat.animal_type = "cat"
 		add_child(cat)
-		cat.global_position = Vector3(randf_range(-55, 55), 0.5, randf_range(-55, 55))
+		cat.global_position = Vector3(randf_range(-150, 150), 0.5, randf_range(-150, 150))
+	print("[SPAWN] Spawned 8 dogs + 6 cats")
 
 func spawn_weapon_pickups():
+	print("[SPAWN] Starting weapon pickup spawn...")
 	var pickup_script = load("res://scripts/systems/weapon_pickup.gd")
+	if not pickup_script:
+		push_error("[SPAWN] Failed to load weapon_pickup.gd!")
+		return
 	var pickup_positions = [
-		[Vector3(15, 0.5, 15), 1, 30],   # Pistol
-		[Vector3(-15, 0.5, 15), 2, 60],  # Rifle
-		[Vector3(15, 0.5, -15), 3, 20],  # Shotgun
-		[Vector3(-15, 0.5, -15), 1, 30], # Pistol
-		[Vector3(35, 0.5, 35), 2, 60],   # Rifle
-		[Vector3(-35, 0.5, -35), 3, 20], # Shotgun
+		[Vector3(15, 0.5, 15), 1, 30],
+		[Vector3(-15, 0.5, 15), 2, 60],
+		[Vector3(15, 0.5, -15), 3, 20],
+		[Vector3(-15, 0.5, -15), 1, 30],
+		[Vector3(35, 0.5, 35), 2, 60],
+		[Vector3(-35, 0.5, -35), 3, 20],
+		[Vector3(77, 0.5, 44), 2, 90],
+		[Vector3(-77, 0.5, -44), 3, 40],
+		[Vector3(100, 0.5, 66), 1, 50],
+		[Vector3(-100, 0.5, -66), 2, 80],
+		[Vector3(55, 0.5, -88), 3, 30],
+		[Vector3(-55, 0.5, 88), 1, 40],
 	]
 	for p in pickup_positions:
 		var pickup = Area3D.new()
