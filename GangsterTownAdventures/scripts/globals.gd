@@ -15,6 +15,10 @@ var sfx_volume: float = 0.8
 var music_volume: float = 0.6
 var current_radio_station: String = "OFF"  # updated by radio_system.gd
 
+# Save point proximity
+var near_save_point: bool = false
+var save_feedback_timer: float = 0.0
+
 # Game statistics
 var kills: int = 0
 var vehicles_stolen: int = 0

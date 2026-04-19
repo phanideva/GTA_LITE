@@ -329,8 +329,16 @@ func _process(_delta):
 				if p_xz.distance_to(v_xz) < 8.0:
 					near_vehicle = true
 					break
-		interact_label.visible = near_vehicle
-		interact_label.text = "Press [E] to enter vehicle" if near_vehicle else ""
+		# Save point prompt overrides vehicle prompt
+		if Globals.near_save_point:
+			interact_label.visible = true
+			if Globals.save_feedback_timer > 0:
+				interact_label.text = "GAME SAVED!"
+			else:
+				interact_label.text = "Press [K] to Save Game"
+		else:
+			interact_label.visible = near_vehicle
+			interact_label.text = "Press [E] to enter vehicle" if near_vehicle else ""
 	elif player and player.is_in_vehicle:
 		interact_label.visible = true
 		if player.current_vehicle and player.current_vehicle.get("current_speed") != null:

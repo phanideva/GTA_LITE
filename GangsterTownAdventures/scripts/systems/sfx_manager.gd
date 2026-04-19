@@ -15,7 +15,10 @@ func _create_audio_players():
 	# Create reusable audio players for each SFX category
 	var categories = ["gunshot", "shotgun", "melee", "footstep", "car_engine", 
 					   "car_horn", "siren", "pickup", "hit", "death", "mission",
-					   "ui_click", "ui_hover", "mission_complete", "pain", "explosion"]
+					   "ui_click", "ui_hover", "mission_complete", "pain", "explosion",
+					   "tire_screech", "npc_grunt", "npc_argue", "npc_chatter",
+					   "car_door", "cash_register", "glass_break", "car_crash",
+					   "player_jump", "player_grunt", "ambient_bird"]
 	for cat in categories:
 		var player = AudioStreamPlayer.new()
 		player.bus = "Master"
@@ -59,17 +62,17 @@ func _generate_sound(sfx_name: String) -> AudioStream:
 	
 	match sfx_name:
 		"gunshot":
-			data = _gen_noise_burst(sample_rate, 0.08, 0.9, 200.0)
+			data = _gen_gunshot(sample_rate)
 		"shotgun":
-			data = _gen_noise_burst(sample_rate, 0.15, 1.0, 120.0)
+			data = _gen_shotgun(sample_rate)
 		"melee":
 			data = _gen_noise_burst(sample_rate, 0.06, 0.5, 300.0)
 		"footstep":
-			data = _gen_noise_burst(sample_rate, 0.04, 0.2, 100.0)
+			data = _gen_footstep(sample_rate)
 		"car_engine":
 			data = _gen_tone(sample_rate, 0.3, 80.0, 0.3)
 		"car_horn":
-			data = _gen_tone(sample_rate, 0.5, 440.0, 0.6)
+			data = _gen_car_horn(sample_rate)
 		"siren":
 			data = _gen_siren(sample_rate, 0.8)
 		"pickup":
@@ -90,6 +93,28 @@ func _generate_sound(sfx_name: String) -> AudioStream:
 			data = _gen_pain_grunt(sample_rate)
 		"explosion":
 			data = _gen_explosion(sample_rate)
+		"tire_screech":
+			data = _gen_tire_screech(sample_rate)
+		"npc_grunt":
+			data = _gen_npc_grunt(sample_rate)
+		"npc_argue":
+			data = _gen_npc_argue(sample_rate)
+		"npc_chatter":
+			data = _gen_npc_chatter(sample_rate)
+		"car_door":
+			data = _gen_car_door(sample_rate)
+		"cash_register":
+			data = _gen_cash_register(sample_rate)
+		"glass_break":
+			data = _gen_glass_break(sample_rate)
+		"car_crash":
+			data = _gen_car_crash(sample_rate)
+		"player_jump":
+			data = _gen_player_jump(sample_rate)
+		"player_grunt":
+			data = _gen_player_grunt(sample_rate)
+		"ambient_bird":
+			data = _gen_bird_chirp_data(sample_rate)
 		_:
 			return null
 	
@@ -552,6 +577,271 @@ func _gen_explosion(rate: int) -> PackedByteArray:
 		var boom = sin(TAU * lerp(90.0, 20.0, clamp(t * 4.0, 0.0, 1.0)) * t) * 0.6
 		var rumble = (randf() * 2 - 1) * exp(-t * 3.0) * 0.5
 		var val = (boom + rumble) * env
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ═══════════════════ ENHANCED SOUND GENERATORS ═══════════════════
+
+# ─── Realistic gunshot — layered crack + body + reverb tail ────
+func _gen_gunshot(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.25)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		# Initial crack (sharp transient)
+		var crack = (randf() * 2 - 1) * exp(-t * 80.0) * 0.9
+		# Body (mid-freq resonance)
+		var body = sin(TAU * 180.0 * t) * exp(-t * 25.0) * 0.4
+		# Sub thump
+		var thump = sin(TAU * 60.0 * t) * exp(-t * 15.0) * 0.3
+		# Reverb tail (filtered noise)
+		var tail = (randf() * 2 - 1) * exp(-t * 6.0) * 0.15
+		var val = crack + body + thump + tail
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Shotgun — wide spread boom ───────────────────────
+func _gen_shotgun(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.35)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var crack = (randf() * 2 - 1) * exp(-t * 40.0) * 1.0
+		var boom = sin(TAU * 55.0 * t) * exp(-t * 10.0) * 0.5
+		var rattle = sin(TAU * 320.0 * t) * exp(-t * 30.0) * 0.2
+		var tail = (randf() * 2 - 1) * exp(-t * 4.0) * 0.2
+		var val = crack + boom + rattle + tail
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Footstep — concrete tap with variation ───────────
+func _gen_footstep(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.08)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	var pitch = randf_range(150.0, 280.0)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = exp(-t * 50.0) * (1.0 - exp(-t * 300.0))
+		var tap = sin(TAU * pitch * t) * 0.15 * env
+		var grit = (randf() * 2 - 1) * 0.1 * env
+		var val = tap + grit
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Car horn — realistic dual-tone ───────────────────
+func _gen_car_horn(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.6)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	var f1 = randf_range(380.0, 460.0)
+	var f2 = f1 * 1.25  # major third
+	for i in range(samples):
+		var t = float(i) / rate
+		var attack = min(t * 30.0, 1.0)
+		var release = max(0.0, 1.0 - (t - 0.45) * 7.0) if t > 0.45 else 1.0
+		var env = attack * release
+		var val = (sin(TAU * f1 * t) * 0.3 + sin(TAU * f2 * t) * 0.25) * env
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Tire screech — filtered noise with pitch sweep ───
+func _gen_tire_screech(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.5)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = exp(-t * 4.0) * (1.0 - exp(-t * 50.0))
+		var freq = 2000.0 + sin(t * 15.0) * 800.0
+		var screech = sin(TAU * freq * t) * 0.15 * env
+		var noise = (randf() * 2 - 1) * 0.25 * env
+		var val = screech + noise
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── NPC grunt (fight/argue) — short vocal burst ──────
+func _gen_npc_grunt(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.18)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	var pitch = randf_range(120.0, 320.0)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = exp(-t * 18.0) * (1.0 - exp(-t * 100.0))
+		var vocal = sin(TAU * pitch * t) * 0.35
+		var harmonic = sin(TAU * pitch * 2.0 * t) * 0.15
+		var noise = (randf() * 2 - 1) * 0.08
+		var val = (vocal + harmonic + noise) * env
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── NPC argue — angry shout ──────────────────────────
+func _gen_npc_argue(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.3)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	var pitch = randf_range(200.0, 400.0)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = (1.0 - exp(-t * 40.0)) * exp(-t * 8.0)
+		var vocal = sin(TAU * pitch * t + sin(t * 12.0) * 0.5) * 0.4
+		var harm2 = sin(TAU * pitch * 1.5 * t) * 0.15
+		var noise = (randf() * 2 - 1) * 0.1
+		var val = (vocal + harm2 + noise) * env
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── NPC chatter — soft mumble ────────────────────────
+func _gen_npc_chatter(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.4)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	var pitch = randf_range(150.0, 350.0)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = (0.5 + 0.5 * sin(t * 8.0)) * exp(-t * 3.0) * 0.3
+		var vocal = sin(TAU * pitch * t + sin(t * 6.0) * 1.0) * env
+		var noise = (randf() * 2 - 1) * 0.03 * env
+		var val = vocal + noise
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Car door — metallic clunk ────────────────────────
+func _gen_car_door(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.15)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = exp(-t * 30.0) * (1.0 - exp(-t * 200.0))
+		var clunk = sin(TAU * 220.0 * t) * 0.3 * env
+		var metal = sin(TAU * 880.0 * t) * 0.15 * exp(-t * 50.0)
+		var rattle = (randf() * 2 - 1) * 0.1 * exp(-t * 20.0)
+		var val = clunk + metal + rattle
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Cash register — cha-ching! ───────────────────────
+func _gen_cash_register(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.4)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var val = 0.0
+		# Mechanical clunk
+		if t < 0.08:
+			val += (randf() * 2 - 1) * 0.3 * exp(-t * 40.0)
+		# Bell ding (two harmonics)
+		if t > 0.05:
+			var bt = t - 0.05
+			val += sin(TAU * 1200.0 * bt) * 0.35 * exp(-bt * 8.0)
+			val += sin(TAU * 1800.0 * bt) * 0.15 * exp(-bt * 12.0)
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Glass break — high freq shatter ──────────────────
+func _gen_glass_break(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.35)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = exp(-t * 8.0) * (1.0 - exp(-t * 200.0))
+		var shatter = (randf() * 2 - 1) * 0.5 * env
+		var ring1 = sin(TAU * 3500.0 * t) * 0.15 * exp(-t * 15.0)
+		var ring2 = sin(TAU * 5200.0 * t) * 0.08 * exp(-t * 20.0)
+		var val = shatter + ring1 + ring2
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Car crash — metallic crunch + glass ───────────────
+func _gen_car_crash(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.6)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var impact = (randf() * 2 - 1) * exp(-t * 12.0) * 0.7
+		var crunch = sin(TAU * 150.0 * t) * exp(-t * 8.0) * 0.3
+		var glass = 0.0
+		if t > 0.05 and t < 0.25:
+			glass = (randf() * 2 - 1) * 0.2 * exp(-(t - 0.05) * 15.0)
+		var metal = sin(TAU * 600.0 * t) * 0.1 * exp(-t * 20.0)
+		var val = impact + crunch + glass + metal
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Player jump grunt — short effort ─────────────────
+func _gen_player_jump(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.12)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = (1.0 - exp(-t * 60.0)) * exp(-t * 14.0)
+		var val = (sin(TAU * 160.0 * t) * 0.35 + sin(TAU * 240.0 * t) * 0.15
+				 + (randf() * 2 - 1) * 0.08) * env
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Player grunt (melee) — deeper male voice ─────────
+func _gen_player_grunt(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.2)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t = float(i) / rate
+		var env = (1.0 - exp(-t * 50.0)) * exp(-t * 10.0)
+		var val = (sin(TAU * 130.0 * t) * 0.45 + sin(TAU * 195.0 * t) * 0.2
+				 + sin(TAU * 260.0 * t) * 0.1 + (randf() * 2 - 1) * 0.1) * env
+		var s = int(clamp(val, -1.0, 1.0) * 32767)
+		data[i * 2]     = s & 0xFF
+		data[i * 2 + 1] = (s >> 8) & 0xFF
+	return data
+
+# ─── Bird chirp data (for SFX system) ─────────────────
+func _gen_bird_chirp_data(rate: int) -> PackedByteArray:
+	var samples = int(rate * 0.25)
+	var data = PackedByteArray()
+	data.resize(samples * 2)
+	var base_freq = randf_range(2000.0, 3500.0)
+	for i in range(samples):
+		var t = float(i) / rate
+		var freq = base_freq + sin(t * 30.0) * 500.0
+		var envelope = (1.0 - t / 0.25) * (0.5 + 0.5 * sin(t * 20.0))
+		var val = sin(t * freq * TAU) * 0.2 * max(envelope, 0.0)
 		var s = int(clamp(val, -1.0, 1.0) * 32767)
 		data[i * 2]     = s & 0xFF
 		data[i * 2 + 1] = (s >> 8) & 0xFF

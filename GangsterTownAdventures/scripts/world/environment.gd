@@ -6,25 +6,52 @@ var time_of_day = 8.0
 var day_speed = 0.015
 var streetlights: Array = []
 
+# Spatial exclusion zones to prevent object overlapping (Vice City style)
+var _occupied_zones: Array = []  # Array of Rect2 (x, z, w, d)
+
+func _register_zone(center_x: float, center_z: float, width: float, depth: float):
+	_occupied_zones.append(Rect2(center_x - width / 2.0, center_z - depth / 2.0, width, depth))
+
+func _is_zone_free(center_x: float, center_z: float, width: float, depth: float) -> bool:
+	var test = Rect2(center_x - width / 2.0, center_z - depth / 2.0, width, depth)
+	for zone in _occupied_zones:
+		if zone.intersects(test):
+			return false
+	return true
+
 func _ready():
 	add_to_group("world_environment")
 	print("[WORLD] Starting environment generation...")
 	create_terrain()
 	create_roads()
+	_register_road_zones()
 	create_road_curbs()
+	create_ocean_and_beach()
+	# Priority placement order: landmarks → establishments → buildings
+	create_districts()
 	create_buildings()
 	create_shops()
-	create_ocean_and_beach()
 	create_traffic_lights()
 	create_crosswalks()
 	create_trees()
 	create_park()
 	create_streetlights()
 	create_sidewalks()
-	create_districts()
+	create_save_point_markers()
 	setup_lighting()
 	setup_sky()
 	print("[WORLD] Environment generation complete!")
+
+func _register_road_zones():
+	# Register all road strips as occupied zones so buildings/objects don't overlap them
+	# 18m zone = 8m road + 5m sidewalk each side — prevents any clipping
+	for i in range(-8, 9):
+		var road_pos = i * 50.0
+		var zone_w = 18.0 if i != 0 else 22.0  # Main boulevard wider
+		# North-south roads
+		_register_zone(road_pos, 0, zone_w, 900.0)
+		# East-west roads
+		_register_zone(0, road_pos, 900.0, zone_w)
 
 func _process(delta):
 	time_of_day += delta * day_speed
@@ -266,25 +293,201 @@ func create_buildings():
 			var min_height = 18.0 if dist_from_center < 60 else (8.0 if dist_from_center < 120 else (4.0 if dist_from_center < 180 else 3.0))
 			
 			var height = randf_range(min_height, max_height)
-			var width = randf_range(18, 35)
-			var depth = randf_range(18, 35)
+			var width = randf_range(14, 26)
+			var depth = randf_range(14, 26)
 			var color = building_colors[randi() % building_colors.size()]
 			
+			# Check overlap before placing — skip if zone occupied (6m margin)
+			if not _is_zone_free(block_center.x, block_center.z, width + 6, depth + 6):
+				# Try smaller building
+				width = min(width, 12)
+				depth = min(depth, 12)
+				if not _is_zone_free(block_center.x, block_center.z, width + 6, depth + 6):
+					continue
+			
+			_register_zone(block_center.x, block_center.z, width, depth)
 			_add_building(block_center, Vector3(width, height, depth), color)
 
 func _add_building(pos: Vector3, size: Vector3, color: Color):
 	var body = StaticBody3D.new()
 	body.position = pos + Vector3(0, size.y / 2.0, 0)
+	var dist = Vector2(pos.x, pos.z).length()
+	var style = 0  # 0=modern glass, 1=art deco, 2=LA stucco, 3=industrial
+	if dist < 60:
+		style = 0  # Downtown: modern glass towers
+	elif dist < 120:
+		style = 1 if randf() < 0.6 else 2  # Midtown: art deco or stucco
+	elif dist < 200:
+		style = 2 if randf() < 0.7 else 3  # Suburbs: LA stucco or industrial
+	else:
+		style = 3  # Periphery: industrial
 
-	# Main structure
-	var mi = MeshInstance3D.new()
-	var bm = BoxMesh.new()
-	bm.size = size
-	mi.mesh = bm
-	mi.set_surface_override_material(0, _make_mat(color, 0.6, 0.05))
-	body.add_child(mi)
+	var base_mat = _make_mat(color, 0.6, 0.05)
+	var dark_mat = _make_mat(color.darkened(0.2), 0.7, 0.05)
+	var accent_color = color.lightened(0.15)
+	var accent_mat = _make_mat(accent_color, 0.5, 0.1)
 
-	# Vice City neon accent strip along roofline
+	# ═══ MAIN STRUCTURE (with setbacks for tall buildings) ═══
+	if size.y > 30 and style == 0:
+		# Stepped tower: base wider, upper narrower
+		var base_h = size.y * 0.4
+		var tower_h = size.y * 0.6
+		# Base podium
+		var base_mi = MeshInstance3D.new()
+		var bbm = BoxMesh.new()
+		bbm.size = Vector3(size.x, base_h, size.z)
+		bbm.material = base_mat
+		base_mi.mesh = bbm
+		base_mi.position = Vector3(0, -size.y / 2.0 + base_h / 2.0, 0)
+		body.add_child(base_mi)
+		# Upper tower (narrower)
+		var tower = MeshInstance3D.new()
+		var twm = BoxMesh.new()
+		twm.size = Vector3(size.x * 0.72, tower_h, size.z * 0.72)
+		twm.material = _make_mat(color.lightened(0.05), 0.5, 0.08)
+		tower.mesh = twm
+		tower.position = Vector3(0, -size.y / 2.0 + base_h + tower_h / 2.0, 0)
+		body.add_child(tower)
+	else:
+		# Standard building
+		var mi = MeshInstance3D.new()
+		var bm = BoxMesh.new()
+		bm.size = size
+		mi.mesh = bm
+		mi.set_surface_override_material(0, base_mat)
+		body.add_child(mi)
+
+	# ═══ FACADE DETAILS (style-dependent) ═══
+	match style:
+		0:  # Modern glass — curtain wall grid + reflective panels
+			# Horizontal floor lines
+			var floors = int(size.y / 3.5)
+			for fi in range(1, floors):
+				var floor_line = MeshInstance3D.new()
+				var flm = BoxMesh.new()
+				flm.size = Vector3(size.x + 0.08, 0.06, size.z + 0.08)
+				flm.material = _make_mat(Color(0.25, 0.25, 0.28), 0.3, 0.6)
+				floor_line.mesh = flm
+				floor_line.position = Vector3(0, -size.y / 2.0 + fi * 3.5, 0)
+				body.add_child(floor_line)
+			# Vertical mullions on front/back
+			var mullion_count = int(size.x / 3.0)
+			for mi_i in range(mullion_count + 1):
+				var mullion = MeshInstance3D.new()
+				var mlm = BoxMesh.new()
+				mlm.size = Vector3(0.06, size.y, 0.06)
+				mlm.material = _make_mat(Color(0.25, 0.25, 0.28), 0.3, 0.6)
+				mullion.mesh = mlm
+				mullion.position = Vector3(-size.x / 2.0 + mi_i * 3.0, 0, size.z / 2.0 + 0.03)
+				body.add_child(mullion)
+			# Glass curtain wall panels (front + back)
+			for face in [1, -1]:
+				var glass_panel = MeshInstance3D.new()
+				var gpm = BoxMesh.new()
+				gpm.size = Vector3(size.x * 0.92, size.y * 0.85, 0.04)
+				var gmat = StandardMaterial3D.new()
+				gmat.albedo_color = Color(0.35, 0.45, 0.60, 0.55)
+				gmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				gmat.roughness = 0.05
+				gmat.metallic = 0.5
+				gpm.material = gmat
+				glass_panel.mesh = gpm
+				glass_panel.position = Vector3(0, 0, face * (size.z / 2.0 + 0.03))
+				body.add_child(glass_panel)
+
+		1:  # Art Deco — vertical pilasters, crown detail, geometric trim
+			# Pilasters (vertical strips on facade)
+			var pilaster_count = int(size.x / 5.0) + 1
+			for pi in range(pilaster_count):
+				var pilaster = MeshInstance3D.new()
+				var plm = BoxMesh.new()
+				plm.size = Vector3(0.35, size.y, 0.15)
+				plm.material = accent_mat
+				pilaster.mesh = plm
+				pilaster.position = Vector3(-size.x / 2.0 + pi * 5.0, 0, size.z / 2.0 + 0.08)
+				body.add_child(pilaster)
+			# Crown/cornice (stepped top)
+			var crown = MeshInstance3D.new()
+			var crm = BoxMesh.new()
+			crm.size = Vector3(size.x + 0.5, 1.2, size.z + 0.5)
+			crm.material = accent_mat
+			crown.mesh = crm
+			crown.position = Vector3(0, size.y / 2.0 - 0.5, 0)
+			body.add_child(crown)
+			# Stepped pyramid crown detail
+			var tip = MeshInstance3D.new()
+			var tipm = BoxMesh.new()
+			tipm.size = Vector3(size.x * 0.4, 1.5, size.z * 0.4)
+			tipm.material = _make_mat(accent_color.lightened(0.1), 0.4, 0.15)
+			tip.mesh = tipm
+			tip.position = Vector3(0, size.y / 2.0 + 0.8, 0)
+			body.add_child(tip)
+			# Decorative window arches (front)
+			for fi in range(1, int(size.y / 4.0)):
+				for wx in range(int(size.x / 4.5)):
+					if randf() < 0.3:
+						continue
+					var arch = MeshInstance3D.new()
+					var arm = CylinderMesh.new()
+					arm.top_radius = 0.5
+					arm.bottom_radius = 0.5
+					arm.height = 0.08
+					arm.material = accent_mat
+					arch.mesh = arm
+					arch.position = Vector3(-size.x / 2.0 + 2.5 + wx * 4.5, -size.y / 2.0 + fi * 4.0 + 1.2, size.z / 2.0 + 0.05)
+					arch.rotation.x = PI / 2
+					body.add_child(arch)
+
+		2:  # LA Stucco — warm colors, balconies, terracotta accents
+			# Balconies (every other floor)
+			for fi in range(2, int(size.y / 4.0), 2):
+				for side_x in [-1, 1]:
+					if randf() < 0.4:
+						continue
+					var balcony_floor = MeshInstance3D.new()
+					var bfm = BoxMesh.new()
+					bfm.size = Vector3(3.0, 0.12, 1.2)
+					bfm.material = _make_mat(Color(0.75, 0.7, 0.65), 0.8)
+					balcony_floor.mesh = bfm
+					balcony_floor.position = Vector3(side_x * (size.x / 2.0 - 2.0), -size.y / 2.0 + fi * 4.0, size.z / 2.0 + 0.6)
+					body.add_child(balcony_floor)
+					# Balcony railing
+					var railing = MeshInstance3D.new()
+					var rlm = BoxMesh.new()
+					rlm.size = Vector3(3.0, 0.8, 0.05)
+					rlm.material = _make_mat(Color(0.4, 0.35, 0.3), 0.6, 0.3)
+					railing.mesh = rlm
+					railing.position = Vector3(side_x * (size.x / 2.0 - 2.0), -size.y / 2.0 + fi * 4.0 + 0.4, size.z / 2.0 + 1.15)
+					body.add_child(railing)
+			# Terracotta roof ledge
+			var roof_ledge = MeshInstance3D.new()
+			var rlm2 = BoxMesh.new()
+			rlm2.size = Vector3(size.x + 0.6, 0.35, size.z + 0.6)
+			rlm2.material = _make_mat(Color(0.72, 0.42, 0.22), 0.85)
+			roof_ledge.mesh = rlm2
+			roof_ledge.position = Vector3(0, size.y / 2.0 + 0.18, 0)
+			body.add_child(roof_ledge)
+
+		3:  # Industrial — corrugated look, exposed elements
+			# Corrugated ridges (horizontal lines)
+			for ri in range(0, int(size.y / 1.5)):
+				var ridge = MeshInstance3D.new()
+				var rdm = BoxMesh.new()
+				rdm.size = Vector3(size.x + 0.04, 0.08, 0.06)
+				rdm.material = dark_mat
+				ridge.mesh = rdm
+				ridge.position = Vector3(0, -size.y / 2.0 + ri * 1.5, size.z / 2.0 + 0.03)
+				body.add_child(ridge)
+			# Loading dock door
+			var dock_door = MeshInstance3D.new()
+			var ddm = BoxMesh.new()
+			ddm.size = Vector3(4.0, 4.0, 0.08)
+			ddm.material = _make_mat(Color(0.3, 0.3, 0.32), 0.6, 0.4)
+			dock_door.mesh = ddm
+			dock_door.position = Vector3(0, -size.y / 2.0 + 2.0, size.z / 2.0 + 0.04)
+			body.add_child(dock_door)
+
+	# ═══ NEON ACCENT TRIM (Vice City style — kept for all styles) ═══
 	var neon_colors = [
 		Color(1.0, 0.2, 0.6), Color(0.2, 0.9, 0.9), Color(1.0, 0.5, 0.1),
 		Color(0.5, 0.2, 1.0), Color(0.2, 1.0, 0.4), Color(1.0, 1.0, 0.2),
@@ -296,32 +499,17 @@ func _add_building(pos: Vector3, size: Vector3, color: Color):
 	neon_mat.emission = neon_color
 	neon_mat.emission_energy_multiplier = 0.8
 
-	# Neon roof trim (front)
-	var trim_f = MeshInstance3D.new()
-	var tfm = BoxMesh.new()
-	tfm.size = Vector3(size.x + 0.2, 0.12, 0.08)
-	tfm.material = neon_mat
-	trim_f.mesh = tfm
-	trim_f.position = Vector3(0, size.y / 2.0 - 0.3, size.z / 2.0 + 0.04)
-	body.add_child(trim_f)
+	# Neon roof trim (front + back)
+	for face in [1, -1]:
+		var trim = MeshInstance3D.new()
+		var tfm = BoxMesh.new()
+		tfm.size = Vector3(size.x + 0.2, 0.12, 0.08)
+		tfm.material = neon_mat
+		trim.mesh = tfm
+		trim.position = Vector3(0, size.y / 2.0 - 0.3, face * (size.z / 2.0 + 0.04))
+		body.add_child(trim)
 
-	# Neon roof trim (back)
-	var trim_b = MeshInstance3D.new()
-	trim_b.mesh = tfm
-	trim_b.position = Vector3(0, size.y / 2.0 - 0.3, -size.z / 2.0 - 0.04)
-	body.add_child(trim_b)
-
-	# Horizontal facade band (Art Deco style)
-	var band_mat = _make_mat(color.lightened(0.15), 0.5, 0.1)
-	var band = MeshInstance3D.new()
-	var bdm = BoxMesh.new()
-	bdm.size = Vector3(size.x + 0.15, 0.25, size.z + 0.15)
-	bdm.material = band_mat
-	band.mesh = bdm
-	band.position = Vector3(0, size.y * 0.15, 0)
-	body.add_child(band)
-
-	# Ground floor awning / storefront (Vice City shops)
+	# ═══ GROUND FLOOR (awning + entry) ═══
 	if size.y > 6.0:
 		var awning_mat = _make_mat(neon_color.darkened(0.3), 0.7)
 		var awning = MeshInstance3D.new()
@@ -331,14 +519,21 @@ func _add_building(pos: Vector3, size: Vector3, color: Color):
 		awning.mesh = awm
 		awning.position = Vector3(0, -size.y / 2.0 + 3.5, size.z / 2.0 + 0.75)
 		body.add_child(awning)
+		# Entry door
+		var entry = MeshInstance3D.new()
+		var enm = BoxMesh.new()
+		enm.size = Vector3(1.8, 2.8, 0.06)
+		enm.material = _make_mat(Color(0.06, 0.05, 0.04))
+		entry.mesh = enm
+		entry.position = Vector3(0, -size.y / 2.0 + 1.4, size.z / 2.0 + 0.04)
+		body.add_child(entry)
 
-	# Windows (rows on facade — every 5th floor for perf)
+	# ═══ WINDOWS (rows on facade) ═══
 	var floors = int(size.y / 3.0)
-	for floor_i in range(1, floors, 5):
-		for side in range(2):  # front and back
+	for floor_i in range(1, floors, 3):
+		for side in range(2):
 			var window = MeshInstance3D.new()
 			var wm = BoxMesh.new()
-			# Randomly lit window (~35% chance)
 			var is_lit = randf() < 0.35
 			var win_mat = StandardMaterial3D.new()
 			if is_lit:
@@ -350,19 +545,15 @@ func _add_building(pos: Vector3, size: Vector3, color: Color):
 				win_mat.albedo_color = Color(0.22, 0.28, 0.40, 0.85)
 				win_mat.roughness = 0.1
 				win_mat.metallic = 0.3
-			if side < 2:
-				wm.size = Vector3(size.x * 0.7, 1.2, 0.05)
-				var z_off = (size.z / 2.0 + 0.03) * (1 if side == 0 else -1)
-				window.position = Vector3(0, -size.y / 2.0 + floor_i * 3.0, z_off)
-			else:
-				wm.size = Vector3(0.05, 1.2, size.z * 0.7)
-				var x_off = (size.x / 2.0 + 0.03) * (1 if side == 2 else -1)
-				window.position = Vector3(x_off, -size.y / 2.0 + floor_i * 3.0, 0)
+			wm.size = Vector3(size.x * 0.7, 1.2, 0.05)
+			var z_off = (size.z / 2.0 + 0.03) * (1 if side == 0 else -1)
+			window.position = Vector3(0, -size.y / 2.0 + floor_i * 3.0, z_off)
 			wm.material = win_mat
 			window.mesh = wm
 			body.add_child(window)
 
-	# Roof detail
+	# ═══ ROOFTOP FEATURES ═══
+	# Roof slab
 	var roof = MeshInstance3D.new()
 	var rm = BoxMesh.new()
 	rm.size = Vector3(size.x + 0.5, 0.3, size.z + 0.5)
@@ -370,6 +561,78 @@ func _add_building(pos: Vector3, size: Vector3, color: Color):
 	roof.mesh = rm
 	roof.position = Vector3(0, size.y / 2.0 + 0.15, 0)
 	body.add_child(roof)
+
+	# AC units on roof (for buildings > 10m)
+	if size.y > 10:
+		for ai in range(randi() % 3 + 1):
+			var ac = MeshInstance3D.new()
+			var acm = BoxMesh.new()
+			acm.size = Vector3(1.8, 0.9, 1.2)
+			acm.material = _make_mat(Color(0.55, 0.55, 0.58), 0.6, 0.3)
+			ac.mesh = acm
+			ac.position = Vector3(randf_range(-size.x / 3.0, size.x / 3.0), size.y / 2.0 + 0.6, randf_range(-size.z / 3.0, size.z / 3.0))
+			body.add_child(ac)
+
+	# Water tower on tall buildings (> 25m)
+	if size.y > 25 and randf() < 0.4:
+		var wt_pos = Vector3(randf_range(-size.x / 4.0, size.x / 4.0), size.y / 2.0, randf_range(-size.z / 4.0, size.z / 4.0))
+		# Legs
+		for lx in [-1, 1]:
+			for lz in [-1, 1]:
+				var leg = MeshInstance3D.new()
+				var lgm = CylinderMesh.new()
+				lgm.height = 2.5
+				lgm.top_radius = 0.06
+				lgm.bottom_radius = 0.08
+				lgm.material = _make_mat(Color(0.35, 0.35, 0.35), 0.6, 0.5)
+				leg.mesh = lgm
+				leg.position = wt_pos + Vector3(lx * 0.8, 1.25, lz * 0.8)
+				body.add_child(leg)
+		# Tank
+		var tank = MeshInstance3D.new()
+		var tnkm = CylinderMesh.new()
+		tnkm.top_radius = 1.2
+		tnkm.bottom_radius = 1.0
+		tnkm.height = 2.0
+		tnkm.material = _make_mat(Color(0.4, 0.38, 0.35), 0.7, 0.2)
+		tank.mesh = tnkm
+		tank.position = wt_pos + Vector3(0, 3.5, 0)
+		body.add_child(tank)
+		# Cone roof on water tower
+		var cone = MeshInstance3D.new()
+		var cnm = CylinderMesh.new()
+		cnm.top_radius = 0.1
+		cnm.bottom_radius = 1.3
+		cnm.height = 0.8
+		cnm.material = _make_mat(Color(0.35, 0.33, 0.3), 0.8)
+		cone.mesh = cnm
+		cone.position = wt_pos + Vector3(0, 4.9, 0)
+		body.add_child(cone)
+
+	# Antenna on very tall buildings
+	if size.y > 40 and randf() < 0.5:
+		var antenna = MeshInstance3D.new()
+		var anm = CylinderMesh.new()
+		anm.top_radius = 0.03
+		anm.bottom_radius = 0.06
+		anm.height = 8.0
+		anm.material = _make_mat(Color(0.6, 0.6, 0.6), 0.4, 0.7)
+		antenna.mesh = anm
+		antenna.position = Vector3(0, size.y / 2.0 + 4.0, 0)
+		body.add_child(antenna)
+		# Red aviation light
+		var av_light = MeshInstance3D.new()
+		var avm = SphereMesh.new()
+		avm.radius = 0.12
+		var avl_mat = StandardMaterial3D.new()
+		avl_mat.albedo_color = Color(1.0, 0.1, 0.1)
+		avl_mat.emission_enabled = true
+		avl_mat.emission = Color(1.0, 0.0, 0.0)
+		avl_mat.emission_energy_multiplier = 1.2
+		avm.material = avl_mat
+		av_light.mesh = avm
+		av_light.position = Vector3(0, size.y / 2.0 + 8.0, 0)
+		body.add_child(av_light)
 
 	var cs = CollisionShape3D.new()
 	var bs = BoxShape3D.new()
@@ -1049,6 +1312,8 @@ func create_districts():
 	_create_la_river()
 	_create_bridges()
 	_create_hollywood_sign()
+	_create_la_establishments()
+	_create_la_landmarks()
 
 func _create_harbor_district():
 	# Harbor: south-west, around (-100, 0, -100)
@@ -2039,44 +2304,1044 @@ func _add_bridge(pos: Vector3):
 
 # ═══════════════════════ HOLLYWOOD SIGN ═══════════════════════
 func _create_hollywood_sign():
-	# Iconic sign on a hillside in the northwest
+	# Iconic HOLLYWOOD sign on a hillside in the northwest — realistic letter shapes
 	var base = Vector3(-200, 0, -200)
 
-	# Hill (raised terrain)
+	# Multi-layered hillside terrain
 	var hill = StaticBody3D.new()
 	hill.position = base
+	# Main hill body
 	var hill_mesh = MeshInstance3D.new()
 	var hm = CylinderMesh.new()
 	hm.top_radius = 40.0
-	hm.bottom_radius = 60.0
-	hm.height = 20.0
-	hm.material = _make_mat(Color(0.28, 0.45, 0.22), 0.9)
+	hm.bottom_radius = 65.0
+	hm.height = 22.0
+	hm.material = _make_mat(Color(0.32, 0.48, 0.24), 0.9)
 	hill_mesh.mesh = hm
-	hill_mesh.position.y = 10.0
+	hill_mesh.position.y = 11.0
 	hill.add_child(hill_mesh)
+	# Secondary hill ridge
+	var ridge = MeshInstance3D.new()
+	var rdm = CylinderMesh.new()
+	rdm.top_radius = 25.0
+	rdm.bottom_radius = 35.0
+	rdm.height = 8.0
+	rdm.material = _make_mat(Color(0.35, 0.50, 0.26), 0.9)
+	ridge.mesh = rdm
+	ridge.position = Vector3(5, 25.0, -5)
+	hill.add_child(ridge)
+	# Hill collision
 	var hill_col = CollisionShape3D.new()
 	hill_col.shape = CylinderShape3D.new()
-	hill_col.shape.radius = 50.0
-	hill_col.shape.height = 20.0
-	hill_col.position.y = 10.0
+	hill_col.shape.radius = 55.0
+	hill_col.shape.height = 22.0
+	hill_col.position.y = 11.0
 	hill.add_child(hill_col)
 	add_child(hill)
 
-	# "GANGSTER TOWN" sign letters (white block letters on hillside)
-	var letters = "GANGSTERTOWN"
+	# Scrub bushes on hillside
+	var bush_mat = _make_mat(Color(0.28, 0.42, 0.2), 0.9)
+	var dark_bush = _make_mat(Color(0.22, 0.36, 0.16), 0.9)
+	for bi in range(25):
+		var bush = MeshInstance3D.new()
+		var bsm = SphereMesh.new()
+		bsm.radius = randf_range(1.0, 3.0)
+		bsm.height = randf_range(1.5, 4.0)
+		bsm.material = bush_mat if bi % 2 == 0 else dark_bush
+		bush.mesh = bsm
+		var angle = randf_range(0, TAU)
+		var dist = randf_range(10, 45)
+		bush.position = base + Vector3(cos(angle) * dist, randf_range(2, 18), sin(angle) * dist)
+		add_child(bush)
+
+	# Letter material — bright white with glow for distance visibility
+	var letter_mat = StandardMaterial3D.new()
+	letter_mat.albedo_color = Color(0.97, 0.97, 0.97)
+	letter_mat.emission_enabled = true
+	letter_mat.emission = Color(1.0, 1.0, 1.0)
+	letter_mat.emission_energy_multiplier = 0.25
+	letter_mat.roughness = 0.4
+
+	# Steel support material
+	var steel_mat = _make_mat(Color(0.45, 0.45, 0.47), 0.6, 0.5)
+
+	# HOLLYWOOD letters — each built from BoxMesh pieces to form letter shapes
+	# Letter dimensions: ~7m tall, ~4.5m wide, 0.4m thick
+	var lh = 7.0   # letter height
+	var lw = 4.5   # letter width
+	var lt = 0.4   # letter thickness
+	var bar = 1.2   # bar width (stroke)
+	var sign_y = 24.0
+	var sign_z = -18.0
+	var rot_y = 0.3  # angle to face city
+	var spacing = 5.5
+	var start_x = -22.0
+
+	# Helper: adds one box piece of a letter
+	var _add_letter_piece = func(lx: float, pieces: Array):
+		for p in pieces:
+			var piece = MeshInstance3D.new()
+			var pm = BoxMesh.new()
+			pm.size = Vector3(p[3], p[4], lt)
+			pm.material = letter_mat
+			piece.mesh = pm
+			piece.position = base + Vector3(start_x + lx + p[0], sign_y + p[1], sign_z + p[2])
+			piece.rotation.y = rot_y
+			add_child(piece)
+			# Support pole behind each piece
+			var pole = MeshInstance3D.new()
+			var plm = CylinderMesh.new()
+			plm.height = sign_y - 2.0
+			plm.top_radius = 0.08
+			plm.bottom_radius = 0.1
+			plm.material = steel_mat
+			pole.mesh = plm
+			pole.position = base + Vector3(start_x + lx + p[0], (sign_y - 2.0) / 2.0 + 2.0, sign_z + p[2] - 0.4)
+			pole.rotation.y = rot_y
+			add_child(pole)
+
+	# H — two vertical bars + horizontal cross bar
+	_add_letter_piece.call(0, [
+		[0, 0, 0, bar, lh],           # left vertical
+		[lw - bar, 0, 0, bar, lh],    # right vertical
+		[lw / 2, 0, 0, lw - bar * 2, bar],  # horizontal cross
+	])
+	# O — four bars forming rectangle (simplified O)
+	_add_letter_piece.call(spacing, [
+		[0, 0, 0, bar, lh],           # left
+		[lw - bar, 0, 0, bar, lh],    # right
+		[lw / 2, lh / 2 - bar / 2, 0, lw, bar],  # top
+		[lw / 2, -lh / 2 + bar / 2, 0, lw, bar],  # bottom
+	])
+	# L — vertical bar + bottom horizontal
+	_add_letter_piece.call(spacing * 2, [
+		[0, 0, 0, bar, lh],           # vertical
+		[lw / 2 - bar / 4, -lh / 2 + bar / 2, 0, lw - bar / 2, bar],  # bottom
+	])
+	# L — same as above
+	_add_letter_piece.call(spacing * 3, [
+		[0, 0, 0, bar, lh],
+		[lw / 2 - bar / 4, -lh / 2 + bar / 2, 0, lw - bar / 2, bar],
+	])
+	# Y — two angled top arms + vertical bottom
+	_add_letter_piece.call(spacing * 4, [
+		[lw / 2, -lh / 4, 0, bar, lh / 2],  # bottom vertical
+		[bar / 2, lh / 4, 0, bar, lh / 2],   # left arm
+		[lw - bar / 2, lh / 4, 0, bar, lh / 2],  # right arm
+	])
+	# W — three vertical bars + two bottom connectors
+	_add_letter_piece.call(spacing * 5, [
+		[0, 0, 0, bar, lh],                   # left
+		[lw / 2, -lh / 4, 0, bar, lh / 2],   # center bottom
+		[lw - bar, 0, 0, bar, lh],            # right
+		[lw / 4, -lh / 2 + bar / 2, 0, lw / 2, bar],  # bottom left connect
+		[lw * 3 / 4, -lh / 2 + bar / 2, 0, lw / 2, bar],  # bottom right connect
+	])
+	# O — same as first O
+	_add_letter_piece.call(spacing * 6, [
+		[0, 0, 0, bar, lh],
+		[lw - bar, 0, 0, bar, lh],
+		[lw / 2, lh / 2 - bar / 2, 0, lw, bar],
+		[lw / 2, -lh / 2 + bar / 2, 0, lw, bar],
+	])
+	# O — same
+	_add_letter_piece.call(spacing * 7, [
+		[0, 0, 0, bar, lh],
+		[lw - bar, 0, 0, bar, lh],
+		[lw / 2, lh / 2 - bar / 2, 0, lw, bar],
+		[lw / 2, -lh / 2 + bar / 2, 0, lw, bar],
+	])
+	# D — vertical bar + curved right side (3 horizontal bars)
+	_add_letter_piece.call(spacing * 8, [
+		[0, 0, 0, bar, lh],                        # left vertical
+		[lw - bar, 0, 0, bar, lh * 0.6],          # right vertical (shorter)
+		[lw / 2, lh / 2 - bar / 2, 0, lw - bar, bar],  # top
+		[lw / 2, -lh / 2 + bar / 2, 0, lw - bar, bar],  # bottom
+		[lw - bar / 2, 0, 0, bar, bar],           # middle right connector
+	])
+
+	# Spotlight for night visibility
+	var spot = SpotLight3D.new()
+	spot.light_color = Color(0.95, 0.92, 0.85)
+	spot.light_energy = 2.0
+	spot.spot_range = 60.0
+	spot.spot_angle = 40.0
+	spot.position = base + Vector3(start_x + spacing * 4, sign_y + 15, sign_z + 20)
+	spot.rotation.x = -0.6
+	add_child(spot)
+
+	# Register zone for overlap prevention
+	_register_zone(base.x, base.z, 130, 130)
+
+# ═══════════════════════ LA ESTABLISHMENTS ═══════════════════════
+func _create_la_establishments():
+	# Bars, strip clubs, nightclubs, pubs, liquor stores, diners, motels, laundromats, pawn shops
+	var establishments = [
+		["THE WHISKEY BAR", Vector3(-60, 0, 35), Color(0.25, 0.12, 0.08), Color(0.9, 0.7, 0.2), "bar"],
+		["VENOM NIGHTCLUB", Vector3(65, 0, -35), Color(0.08, 0.05, 0.15), Color(0.8, 0.1, 0.9), "nightclub"],
+		["PARADISE STRIP", Vector3(-35, 0, -60), Color(0.15, 0.05, 0.1), Color(1.0, 0.2, 0.6), "strip_club"],
+		["SUNSET PUB", Vector3(40, 0, 65), Color(0.22, 0.15, 0.08), Color(0.85, 0.6, 0.15), "bar"],
+		["NEON LOUNGE", Vector3(-85, 0, -25), Color(0.06, 0.06, 0.12), Color(0.2, 0.9, 0.9), "nightclub"],
+		["LIQUOR KING", Vector3(90, 0, 25), Color(0.45, 0.35, 0.25), Color(0.9, 0.3, 0.1), "liquor"],
+		["LUCKY PAWN", Vector3(-45, 0, 85), Color(0.35, 0.3, 0.25), Color(0.95, 0.85, 0.2), "pawn"],
+		["WASH N DRY", Vector3(50, 0, -85), Color(0.7, 0.75, 0.8), Color(0.3, 0.6, 0.9), "laundromat"],
+		["STARLIGHT MOTEL", Vector3(-120, 0, 50), Color(0.55, 0.45, 0.4), Color(0.9, 0.5, 0.7), "motel"],
+		["MEL'S DINER", Vector3(120, 0, -50), Color(0.85, 0.25, 0.2), Color(0.95, 0.9, 0.5), "diner"],
+		["COYOTE CANTINA", Vector3(-75, 0, -75), Color(0.6, 0.35, 0.15), Color(0.2, 0.8, 0.3), "bar"],
+		["XXX PEEP SHOW", Vector3(75, 0, 75), Color(0.1, 0.05, 0.08), Color(0.95, 0.1, 0.3), "strip_club"],
+	]
+	for e in establishments:
+		var epos = e[1]
+		# Check overlap — shift position if needed (max 5 attempts)
+		var placed = false
+		for attempt in range(5):
+			if _is_zone_free(epos.x, epos.z, 14, 12):
+				_register_zone(epos.x, epos.z, 14, 12)
+				_add_establishment(e[0], epos, e[2], e[3], e[4])
+				placed = true
+				break
+			epos.x += 15.0  # shift along road
+		if not placed:
+			# Force place at original position as fallback
+			_add_establishment(e[0], e[1], e[2], e[3], e[4])
+
+func _add_establishment(est_name: String, pos: Vector3, wall_color: Color, sign_color: Color, est_type: String):
+	var body = StaticBody3D.new()
+	var bld_h = 6.0 if est_type != "motel" else 8.0
+	body.position = pos + Vector3(0, bld_h / 2.0, 0)
+
+	# Main building
+	var main = MeshInstance3D.new()
+	var mm = BoxMesh.new()
+	mm.size = Vector3(10, bld_h, 8)
+	mm.material = _make_mat(wall_color, 0.7)
+	main.mesh = mm
+	body.add_child(main)
+
+	# Door
+	var door = MeshInstance3D.new()
+	var dm = BoxMesh.new()
+	dm.size = Vector3(1.4, 2.6, 0.06)
+	dm.material = _make_mat(Color(0.06, 0.04, 0.03))
+	door.mesh = dm
+	door.position = Vector3(0, -bld_h / 2.0 + 1.3, 4.03)
+	body.add_child(door)
+
+	# Neon sign (glowing)
+	var sign_panel = MeshInstance3D.new()
+	var spm = BoxMesh.new()
+	spm.size = Vector3(8, 1.2, 0.12)
+	var sign_mat = StandardMaterial3D.new()
+	sign_mat.albedo_color = sign_color
+	sign_mat.emission_enabled = true
+	sign_mat.emission = sign_color
+	sign_mat.emission_energy_multiplier = 1.2
+	spm.material = sign_mat
+	sign_panel.mesh = spm
+	sign_panel.position = Vector3(0, bld_h / 2.0 - 0.8, 4.08)
+	body.add_child(sign_panel)
+
+	# Type-specific decorations
+	match est_type:
+		"bar", "nightclub":
+			# Bouncer light / spot
+			var spot = MeshInstance3D.new()
+			var spm2 = CylinderMesh.new()
+			spm2.top_radius = 0.08
+			spm2.bottom_radius = 0.12
+			spm2.height = 0.5
+			var spot_mat = StandardMaterial3D.new()
+			spot_mat.albedo_color = sign_color
+			spot_mat.emission_enabled = true
+			spot_mat.emission = sign_color
+			spot_mat.emission_energy_multiplier = 0.8
+			spm2.material = spot_mat
+			spot.mesh = spm2
+			spot.position = Vector3(-3.5, -bld_h / 2.0 + 4.0, 4.1)
+			body.add_child(spot)
+			# Velvet rope posts
+			for side in [-1, 1]:
+				var post = MeshInstance3D.new()
+				var ptm = CylinderMesh.new()
+				ptm.top_radius = 0.04
+				ptm.bottom_radius = 0.06
+				ptm.height = 0.9
+				ptm.material = _make_mat(Color(0.7, 0.6, 0.1), 0.3, 0.8)
+				post.mesh = ptm
+				post.position = Vector3(side * 1.2, -bld_h / 2.0 + 0.45, 5.0)
+				body.add_child(post)
+			# Rope between posts
+			var rope = MeshInstance3D.new()
+			var rp = CylinderMesh.new()
+			rp.top_radius = 0.02
+			rp.bottom_radius = 0.02
+			rp.height = 2.4
+			rp.material = _make_mat(Color(0.6, 0.05, 0.1))
+			rope.mesh = rp
+			rope.position = Vector3(0, -bld_h / 2.0 + 0.8, 5.0)
+			rope.rotation.z = PI / 2
+			body.add_child(rope)
+
+		"strip_club":
+			# Neon outline (pink/red tubes around entrance)
+			for side in [-1, 1]:
+				var tube = MeshInstance3D.new()
+				var tbm = CylinderMesh.new()
+				tbm.top_radius = 0.04
+				tbm.bottom_radius = 0.04
+				tbm.height = 3.5
+				var neon_mat = StandardMaterial3D.new()
+				neon_mat.albedo_color = Color(1.0, 0.1, 0.4)
+				neon_mat.emission_enabled = true
+				neon_mat.emission = Color(1.0, 0.15, 0.5)
+				neon_mat.emission_energy_multiplier = 1.5
+				tbm.material = neon_mat
+				tube.mesh = tbm
+				tube.position = Vector3(side * 2.0, -bld_h / 2.0 + 2.0, 4.08)
+				body.add_child(tube)
+			# Blacked out windows
+			for wx in [-1, 1]:
+				var bwin = MeshInstance3D.new()
+				var bwm = BoxMesh.new()
+				bwm.size = Vector3(2.0, 1.5, 0.06)
+				bwm.material = _make_mat(Color(0.03, 0.02, 0.02))
+				bwin.mesh = bwm
+				bwin.position = Vector3(wx * 3.0, 0, 4.04)
+				body.add_child(bwin)
+
+		"liquor":
+			# Iron bars on windows
+			for wx in [-1, 1]:
+				for bar_i in range(4):
+					var bar = MeshInstance3D.new()
+					var brm = CylinderMesh.new()
+					brm.top_radius = 0.015
+					brm.bottom_radius = 0.015
+					brm.height = 1.8
+					brm.material = _make_mat(Color(0.3, 0.3, 0.3), 0.5, 0.7)
+					bar.mesh = brm
+					bar.position = Vector3(wx * 3.0 - 0.6 + bar_i * 0.4, 0.3, 4.05)
+					body.add_child(bar)
+
+		"motel":
+			# Second floor balcony/walkway
+			var walkway = MeshInstance3D.new()
+			var wm = BoxMesh.new()
+			wm.size = Vector3(10.5, 0.15, 1.5)
+			wm.material = _make_mat(Color(0.5, 0.48, 0.45), 0.8)
+			walkway.mesh = wm
+			walkway.position = Vector3(0, 0.5, 4.7)
+			body.add_child(walkway)
+			# Railing
+			var railing = MeshInstance3D.new()
+			var rlm = BoxMesh.new()
+			rlm.size = Vector3(10.5, 0.8, 0.05)
+			rlm.material = _make_mat(Color(0.4, 0.35, 0.3), 0.6, 0.4)
+			railing.mesh = rlm
+			railing.position = Vector3(0, 0.95, 5.4)
+			body.add_child(railing)
+			# Room doors (second floor)
+			for di in range(3):
+				var rdoor = MeshInstance3D.new()
+				var rdm = BoxMesh.new()
+				rdm.size = Vector3(0.9, 2.0, 0.05)
+				rdm.material = _make_mat(Color(0.35, 0.25, 0.15))
+				rdoor.mesh = rdm
+				rdoor.position = Vector3(-3.0 + di * 3.0, 1.5, 4.04)
+				body.add_child(rdoor)
+
+		"diner":
+			# Large front windows (like a classic diner)
+			for wx in [-1, 0, 1]:
+				var dwin = MeshInstance3D.new()
+				var dwm = BoxMesh.new()
+				dwm.size = Vector3(2.5, 2.2, 0.05)
+				var gmat = StandardMaterial3D.new()
+				gmat.albedo_color = Color(0.8, 0.85, 0.6, 0.5)
+				gmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				gmat.roughness = 0.05
+				gmat.emission_enabled = true
+				gmat.emission = Color(0.9, 0.85, 0.6)
+				gmat.emission_energy_multiplier = 0.3
+				dwm.material = gmat
+				dwin.mesh = dwm
+				dwin.position = Vector3(wx * 2.8, -0.5, 4.04)
+				body.add_child(dwin)
+			# Chrome trim
+			var chrome_strip = MeshInstance3D.new()
+			var csm = BoxMesh.new()
+			csm.size = Vector3(10.5, 0.15, 0.08)
+			csm.material = _make_mat(Color(0.8, 0.8, 0.82), 0.1, 0.9)
+			chrome_strip.mesh = csm
+			chrome_strip.position = Vector3(0, -bld_h / 2.0 + 3.5, 4.06)
+			body.add_child(chrome_strip)
+
+		"pawn":
+			# Barred windows + "OPEN" neon
+			var open_sign = MeshInstance3D.new()
+			var osm = BoxMesh.new()
+			osm.size = Vector3(2.0, 0.6, 0.08)
+			var open_mat = StandardMaterial3D.new()
+			open_mat.albedo_color = Color(0.1, 0.9, 0.2)
+			open_mat.emission_enabled = true
+			open_mat.emission = Color(0.1, 1.0, 0.2)
+			open_mat.emission_energy_multiplier = 0.8
+			osm.material = open_mat
+			open_sign.mesh = osm
+			open_sign.position = Vector3(2.5, -0.5, 4.06)
+			body.add_child(open_sign)
+
+	# Awning over entrance
+	var awning = MeshInstance3D.new()
+	var awm = BoxMesh.new()
+	awm.size = Vector3(10.5, 0.1, 2.0)
+	awm.material = _make_mat(sign_color.darkened(0.4), 0.7)
+	awning.mesh = awm
+	awning.position = Vector3(0, -bld_h / 2.0 + 3.2, 4.8)
+	body.add_child(awning)
+
+	# Collision
+	var cs = CollisionShape3D.new()
+	var bs = BoxShape3D.new()
+	bs.size = Vector3(10, bld_h, 8)
+	cs.shape = bs
+	body.add_child(cs)
+
+	add_child(body)
+
+# ═══════════════════════ LA LANDMARKS ═══════════════════════
+func _create_la_landmarks():
+	_create_santa_monica_pier()
+	_create_venice_beach()
+	_create_griffith_observatory()
+	_create_walk_of_fame()
+	_create_rodeo_drive()
+	_create_chinatown()
+	_create_lax_control_tower()
+	_create_beverly_hills_mansion()
+	_create_dodger_stadium_sign()
+
+func _create_santa_monica_pier():
+	# Pier extending into ocean from the beach area
+	var base = Vector3(0, 0, 160)
+	_register_zone(base.x, base.z + 30, 20, 70)
+	# Pier deck (wooden planks)
+	var pier = StaticBody3D.new()
+	pier.position = base + Vector3(0, 1.5, 30)
+	var deck = MeshInstance3D.new()
+	var dkm = BoxMesh.new()
+	dkm.size = Vector3(12, 0.4, 60)
+	dkm.material = _make_mat(Color(0.5, 0.35, 0.2), 0.9)
+	deck.mesh = dkm
+	pier.add_child(deck)
+	var dk_col = CollisionShape3D.new()
+	dk_col.shape = BoxShape3D.new()
+	dk_col.shape.size = Vector3(12, 0.4, 60)
+	pier.add_child(dk_col)
+	add_child(pier)
+
+	# Pier supports
+	for pz in range(6):
+		for side in [-1, 1]:
+			var pil = MeshInstance3D.new()
+			var plm = CylinderMesh.new()
+			plm.height = 3.5
+			plm.top_radius = 0.2
+			plm.bottom_radius = 0.25
+			plm.material = _make_mat(Color(0.35, 0.25, 0.15), 0.9)
+			pil.mesh = plm
+			pil.position = base + Vector3(side * 5, 0.0, 5 + pz * 10)
+			add_child(pil)
+
+	# Ferris wheel frame (circular structure)
+	var fw_center = base + Vector3(0, 12, 40)
+	var fw_radius = 8.0
+	# Spokes
+	for i in range(12):
+		var angle = i * TAU / 12.0
+		var spoke = MeshInstance3D.new()
+		var skm = CylinderMesh.new()
+		skm.top_radius = 0.06
+		skm.bottom_radius = 0.06
+		skm.height = fw_radius
+		skm.material = _make_mat(Color(0.7, 0.1, 0.1), 0.4, 0.6)
+		spoke.mesh = skm
+		spoke.position = fw_center + Vector3(0, sin(angle) * fw_radius / 2.0, cos(angle) * fw_radius / 2.0)
+		spoke.rotation.x = angle
+		add_child(spoke)
+	# Rim segments
+	for i in range(24):
+		var angle = i * TAU / 24.0
+		var seg = MeshInstance3D.new()
+		var sgm = BoxMesh.new()
+		sgm.size = Vector3(0.5, 0.1, 2.2)
+		sgm.material = _make_mat(Color(0.7, 0.1, 0.1), 0.4, 0.6)
+		seg.mesh = sgm
+		seg.position = fw_center + Vector3(0, sin(angle) * fw_radius, cos(angle) * fw_radius)
+		seg.rotation.x = angle
+		add_child(seg)
+	# Gondola cars
+	for i in range(8):
+		var angle = i * TAU / 8.0
+		var car = MeshInstance3D.new()
+		var crm = BoxMesh.new()
+		crm.size = Vector3(0.8, 1.0, 0.8)
+		var car_colors = [Color(0.9, 0.2, 0.2), Color(0.2, 0.6, 0.9), Color(0.9, 0.8, 0.1), Color(0.3, 0.8, 0.3)]
+		crm.material = _make_mat(car_colors[i % car_colors.size()])
+		car.mesh = crm
+		car.position = fw_center + Vector3(0, sin(angle) * fw_radius - 0.5, cos(angle) * fw_radius)
+		add_child(car)
+
+	# Support structure
+	for side in [-1, 1]:
+		var leg = MeshInstance3D.new()
+		var lgm = CylinderMesh.new()
+		lgm.height = 14.0
+		lgm.top_radius = 0.15
+		lgm.bottom_radius = 0.25
+		lgm.material = _make_mat(Color(0.5, 0.5, 0.52), 0.5, 0.6)
+		leg.mesh = lgm
+		leg.position = base + Vector3(side * 2, 7.0, 40)
+		leg.rotation.z = side * 0.15
+		add_child(leg)
+
+func _create_venice_beach():
+	# Muscle beach / boardwalk area near the main beach
+	var base = Vector3(-60, 0, 155)
+	_register_zone(base.x, base.z, 90, 20)
+	# Boardwalk (concrete path)
+	var bw = MeshInstance3D.new()
+	var bwm = BoxMesh.new()
+	bwm.size = Vector3(80, 0.15, 4)
+	bwm.material = _make_mat(Color(0.6, 0.58, 0.55), 0.85)
+	bw.mesh = bwm
+	bw.position = base + Vector3(0, 0.08, 0)
+	add_child(bw)
+
+	# Street art walls (colorful murals)
+	var mural_colors = [Color(0.9, 0.2, 0.3), Color(0.2, 0.7, 0.9), Color(0.9, 0.8, 0.1), Color(0.5, 0.2, 0.8), Color(0.2, 0.9, 0.4)]
+	for mi_i in range(5):
+		var wall = MeshInstance3D.new()
+		var wm = BoxMesh.new()
+		wm.size = Vector3(6, 3, 0.2)
+		wm.material = _make_mat(mural_colors[mi_i])
+		wall.mesh = wm
+		wall.position = base + Vector3(-30 + mi_i * 15, 1.5, -3)
+		add_child(wall)
+
+	# Muscle Beach gym equipment (outdoor)
+	var gym_base = base + Vector3(20, 0, 5)
+	# Pull-up bar
+	for side in [-1, 1]:
+		var post = MeshInstance3D.new()
+		var pm = CylinderMesh.new()
+		pm.height = 2.5
+		pm.top_radius = 0.04
+		pm.bottom_radius = 0.05
+		pm.material = _make_mat(Color(0.3, 0.3, 0.3), 0.4, 0.7)
+		post.mesh = pm
+		post.position = gym_base + Vector3(side * 1.2, 1.25, 0)
+		add_child(post)
+	var bar = MeshInstance3D.new()
+	var brm = CylinderMesh.new()
+	brm.height = 2.4
+	brm.top_radius = 0.025
+	brm.bottom_radius = 0.025
+	brm.material = _make_mat(Color(0.6, 0.6, 0.6), 0.3, 0.8)
+	bar.mesh = brm
+	bar.position = gym_base + Vector3(0, 2.5, 0)
+	bar.rotation.z = PI / 2
+	add_child(bar)
+
+	# Skate park ramp
+	var ramp = MeshInstance3D.new()
+	var rpm = BoxMesh.new()
+	rpm.size = Vector3(6, 2, 4)
+	rpm.material = _make_mat(Color(0.5, 0.48, 0.45), 0.85)
+	ramp.mesh = rpm
+	ramp.position = base + Vector3(-25, 1.0, 8)
+	ramp.rotation.x = -0.3
+	add_child(ramp)
+
+func _create_griffith_observatory():
+	# Iconic white domed observatory on a hill in the north
+	var base = Vector3(-150, 0, -150)
+	_register_zone(base.x, base.z, 110, 110)
+
+	# Hill
+	var hill = MeshInstance3D.new()
+	var hlm = CylinderMesh.new()
+	hlm.top_radius = 30.0
+	hlm.bottom_radius = 50.0
+	hlm.height = 18.0
+	hlm.material = _make_mat(Color(0.3, 0.48, 0.25), 0.9)
+	hill.mesh = hlm
+	hill.position = base + Vector3(0, 9.0, 0)
+	add_child(hill)
+
+	# Main building (Art Deco white)
+	var obs_pos = base + Vector3(0, 18.0, 0)
+	var main_bldg = StaticBody3D.new()
+	main_bldg.position = obs_pos + Vector3(0, 3, 0)
+	var obs_main = MeshInstance3D.new()
+	var obm = BoxMesh.new()
+	obm.size = Vector3(25, 6, 12)
+	obm.material = _make_mat(Color(0.92, 0.90, 0.85), 0.5, 0.1)
+	obs_main.mesh = obm
+	main_bldg.add_child(obs_main)
+	var obs_col = CollisionShape3D.new()
+	obs_col.shape = BoxShape3D.new()
+	obs_col.shape.size = Vector3(25, 6, 12)
+	main_bldg.add_child(obs_col)
+	add_child(main_bldg)
+
+	# Central dome (copper/green patina)
+	var dome = MeshInstance3D.new()
+	var dme = SphereMesh.new()
+	dme.radius = 5.0
+	dme.height = 5.5
+	dme.material = _make_mat(Color(0.45, 0.6, 0.5), 0.6, 0.3)
+	dome.mesh = dme
+	dome.position = obs_pos + Vector3(0, 8.5, 0)
+	add_child(dome)
+
+	# Side domes (smaller)
+	for side in [-1, 1]:
+		var sdome = MeshInstance3D.new()
+		var sdm = SphereMesh.new()
+		sdm.radius = 3.0
+		sdm.height = 3.5
+		sdm.material = _make_mat(Color(0.45, 0.6, 0.5), 0.6, 0.3)
+		sdome.mesh = sdm
+		sdome.position = obs_pos + Vector3(side * 10, 7.5, 0)
+		add_child(sdome)
+
+	# Telescope tube on central dome
+	var telescope = MeshInstance3D.new()
+	var tlm = CylinderMesh.new()
+	tlm.top_radius = 0.3
+	tlm.bottom_radius = 0.5
+	tlm.height = 3.0
+	tlm.material = _make_mat(Color(0.5, 0.5, 0.52), 0.4, 0.6)
+	telescope.mesh = tlm
+	telescope.position = obs_pos + Vector3(0, 11.5, 0)
+	telescope.rotation.x = -0.5
+	add_child(telescope)
+
+func _create_walk_of_fame():
+	# Hollywood Walk of Fame — a decorated sidewalk stretch
+	var base = Vector3(-30, 0, -35)
+	_register_zone(base.x, base.z, 90, 10)
+	# Pink terrazzo sidewalk
+	var walk = MeshInstance3D.new()
+	var wkm = BoxMesh.new()
+	wkm.size = Vector3(80, 0.12, 4)
+	wkm.material = _make_mat(Color(0.75, 0.55, 0.55), 0.8)
+	walk.mesh = wkm
+	walk.position = base + Vector3(0, 0.06, 0)
+	add_child(walk)
+
+	# Star markers (brass stars embedded in sidewalk)
+	for i in range(16):
+		var star = MeshInstance3D.new()
+		var stm = CylinderMesh.new()
+		stm.top_radius = 0.5
+		stm.bottom_radius = 0.5
+		stm.height = 0.04
+		var star_mat = StandardMaterial3D.new()
+		star_mat.albedo_color = Color(0.78, 0.62, 0.28)
+		star_mat.roughness = 0.2
+		star_mat.metallic = 0.8
+		stm.material = star_mat
+		star.mesh = stm
+		star.position = base + Vector3(-35 + i * 4.5, 0.14, randf_range(-1.2, 1.2))
+		add_child(star)
+
+func _create_rodeo_drive():
+	# Luxury shopping district — high-end storefronts
+	var base = Vector3(130, 0, 40)
+	_register_zone(base.x + 10, base.z, 25, 70)
+	# Fancy sidewalk (marble-like)
+	var walk = MeshInstance3D.new()
+	var wkm = BoxMesh.new()
+	wkm.size = Vector3(4, 0.12, 60)
+	wkm.material = _make_mat(Color(0.88, 0.85, 0.82), 0.3, 0.1)
+	walk.mesh = wkm
+	walk.position = base + Vector3(8, 0.06, 0)
+	add_child(walk)
+
+	# Luxury storefronts
+	var stores = [
+		["GUCCI", Color(0.08, 0.08, 0.08), Color(0.85, 0.75, 0.35)],
+		["PRADA", Color(0.15, 0.15, 0.15), Color(0.9, 0.9, 0.9)],
+		["CHANEL", Color(0.05, 0.05, 0.05), Color(0.95, 0.92, 0.85)],
+		["LV", Color(0.35, 0.2, 0.1), Color(0.9, 0.8, 0.5)],
+		["TIFFANY", Color(0.45, 0.75, 0.78), Color(0.9, 0.9, 0.9)],
+	]
+	for si in range(stores.size()):
+		var store = stores[si]
+		var spos = base + Vector3(12, 3, -25 + si * 12)
+		var sbody = StaticBody3D.new()
+		sbody.position = spos
+		var smi = MeshInstance3D.new()
+		var sbm = BoxMesh.new()
+		sbm.size = Vector3(8, 6, 10)
+		sbm.material = _make_mat(store[1], 0.3, 0.15)
+		smi.mesh = sbm
+		sbody.add_child(smi)
+		# Glass front
+		var gf = MeshInstance3D.new()
+		var gfm = BoxMesh.new()
+		gfm.size = Vector3(0.06, 4, 8)
+		var gmat = StandardMaterial3D.new()
+		gmat.albedo_color = Color(0.7, 0.75, 0.8, 0.35)
+		gmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		gmat.roughness = 0.02
+		gmat.metallic = 0.4
+		gfm.material = gmat
+		gf.mesh = gfm
+		gf.position = Vector3(-4.03, -0.5, 0)
+		sbody.add_child(gf)
+		# Name plaque (gold lettering)
+		var plaque = MeshInstance3D.new()
+		var pqm = BoxMesh.new()
+		pqm.size = Vector3(0.08, 0.8, 4)
+		var plq_mat = StandardMaterial3D.new()
+		plq_mat.albedo_color = store[2]
+		plq_mat.emission_enabled = true
+		plq_mat.emission = store[2]
+		plq_mat.emission_energy_multiplier = 0.4
+		pqm.material = plq_mat
+		plaque.mesh = pqm
+		plaque.position = Vector3(-4.06, 2.0, 0)
+		sbody.add_child(plaque)
+		var scol = CollisionShape3D.new()
+		scol.shape = BoxShape3D.new()
+		scol.shape.size = Vector3(8, 6, 10)
+		sbody.add_child(scol)
+		add_child(sbody)
+
+	# Decorative palm trees along the drive
+	for i in range(6):
+		_add_palm_tree(base + Vector3(5, 0, -28 + i * 10))
+
+func _create_chinatown():
+	# Chinatown gate and buildings — distinctive red/gold
+	var base = Vector3(-130, 0, -40)
+	_register_zone(base.x, base.z, 50, 30)
+
+	# Ornamental Gate (paifang)
+	var gate = Node3D.new()
+	gate.position = base
+	# Main pillars (red)
+	for side in [-1, 1]:
+		var pillar = MeshInstance3D.new()
+		var plm = CylinderMesh.new()
+		plm.height = 8.0
+		plm.top_radius = 0.3
+		plm.bottom_radius = 0.35
+		plm.material = _make_mat(Color(0.75, 0.12, 0.1), 0.6)
+		pillar.mesh = plm
+		pillar.position = Vector3(side * 5, 4, 0)
+		gate.add_child(pillar)
+	# Cross beam (gold)
+	var beam = MeshInstance3D.new()
+	var bmm = BoxMesh.new()
+	bmm.size = Vector3(12, 0.6, 0.8)
+	bmm.material = _make_mat(Color(0.85, 0.7, 0.2), 0.4, 0.5)
+	beam.mesh = bmm
+	beam.position = Vector3(0, 7.5, 0)
+	gate.add_child(beam)
+	# Roof (pagoda style — tiered)
+	for tier in range(2):
+		var pg_roof = MeshInstance3D.new()
+		var prm = BoxMesh.new()
+		prm.size = Vector3(13 - tier * 3, 0.3, 3 - tier * 0.5)
+		prm.material = _make_mat(Color(0.2, 0.55, 0.25), 0.7)
+		pg_roof.mesh = prm
+		pg_roof.position = Vector3(0, 8.0 + tier * 1.2, 0)
+		gate.add_child(pg_roof)
+	add_child(gate)
+
+	# Chinatown buildings (red + gold trim)
+	var ct_colors = [Color(0.7, 0.15, 0.12), Color(0.6, 0.12, 0.1), Color(0.65, 0.18, 0.12)]
+	for i in range(4):
+		var bpos = base + Vector3(-15 + i * 10, 0, -12)
+		_add_building(bpos, Vector3(8, randf_range(8, 14), 8), ct_colors[i % ct_colors.size()])
+
+	# Red lanterns
+	for i in range(8):
+		var lantern = MeshInstance3D.new()
+		var lnm = SphereMesh.new()
+		lnm.radius = 0.4
+		lnm.height = 0.6
+		var lan_mat = StandardMaterial3D.new()
+		lan_mat.albedo_color = Color(0.9, 0.15, 0.1)
+		lan_mat.emission_enabled = true
+		lan_mat.emission = Color(0.95, 0.2, 0.1)
+		lan_mat.emission_energy_multiplier = 0.5
+		lnm.material = lan_mat
+		lantern.mesh = lnm
+		lantern.position = base + Vector3(-12 + i * 3.5, 5.5, randf_range(-3, 3))
+		add_child(lantern)
+
+func _create_lax_control_tower():
+	# Airport control tower in the far south
+	var base = Vector3(160, 0, 120)
+	_register_zone(base.x + 15, base.z, 50, 130)
+
+	# Tower base (wide pedestal)
+	var pedestal = StaticBody3D.new()
+	pedestal.position = base + Vector3(0, 3, 0)
+	var ped = MeshInstance3D.new()
+	var pdm = BoxMesh.new()
+	pdm.size = Vector3(12, 6, 12)
+	pdm.material = _make_mat(Color(0.7, 0.7, 0.72), 0.6, 0.1)
+	ped.mesh = pdm
+	pedestal.add_child(ped)
+	var pcol = CollisionShape3D.new()
+	pcol.shape = BoxShape3D.new()
+	pcol.shape.size = Vector3(12, 6, 12)
+	pedestal.add_child(pcol)
+	add_child(pedestal)
+
+	# Tower shaft
+	var shaft = MeshInstance3D.new()
+	var shm = CylinderMesh.new()
+	shm.height = 25.0
+	shm.top_radius = 2.0
+	shm.bottom_radius = 2.5
+	shm.material = _make_mat(Color(0.75, 0.75, 0.78), 0.5, 0.15)
+	shaft.mesh = shm
+	shaft.position = base + Vector3(0, 18.5, 0)
+	add_child(shaft)
+
+	# Control room (glass cab at top)
+	var cab = MeshInstance3D.new()
+	var cbm = CylinderMesh.new()
+	cbm.top_radius = 5.0
+	cbm.bottom_radius = 4.5
+	cbm.height = 4.0
+	var cab_mat = StandardMaterial3D.new()
+	cab_mat.albedo_color = Color(0.5, 0.65, 0.8, 0.5)
+	cab_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	cab_mat.roughness = 0.05
+	cab_mat.metallic = 0.3
+	cbm.material = cab_mat
+	cab.mesh = cbm
+	cab.position = base + Vector3(0, 33, 0)
+	add_child(cab)
+
+	# Roof disc
+	var roof = MeshInstance3D.new()
+	var rfm = CylinderMesh.new()
+	rfm.top_radius = 5.5
+	rfm.bottom_radius = 5.5
+	rfm.height = 0.5
+	rfm.material = _make_mat(Color(0.6, 0.6, 0.62), 0.5, 0.2)
+	roof.mesh = rfm
+	roof.position = base + Vector3(0, 35.3, 0)
+	add_child(roof)
+
+	# Runway strip
+	var runway = MeshInstance3D.new()
+	var rwm = BoxMesh.new()
+	rwm.size = Vector3(15, 0.1, 120)
+	rwm.material = _make_mat(Color(0.18, 0.18, 0.2), 0.85)
+	runway.mesh = rwm
+	runway.position = base + Vector3(25, 0.05, 0)
+	add_child(runway)
+	# Runway markings
+	for ri in range(10):
+		var mark = MeshInstance3D.new()
+		var mkm = BoxMesh.new()
+		mkm.size = Vector3(1.5, 0.02, 4)
+		mkm.material = _make_mat(Color(0.95, 0.95, 0.95))
+		mark.mesh = mkm
+		mark.position = base + Vector3(25, 0.12, -50 + ri * 10)
+		add_child(mark)
+
+func _create_beverly_hills_mansion():
+	# Luxury mansion area in the hills
+	var base = Vector3(-160, 0, -100)
+	_register_zone(base.x, base.z, 60, 50)
+
+	# Elevated terrain
+	var terrain = MeshInstance3D.new()
+	var trm = BoxMesh.new()
+	trm.size = Vector3(50, 4, 40)
+	trm.material = _make_mat(Color(0.2, 0.5, 0.2), 0.9)
+	terrain.mesh = trm
+	terrain.position = base + Vector3(0, 2, 0)
+	add_child(terrain)
+
+	# Main mansion
+	var mansion = StaticBody3D.new()
+	mansion.position = base + Vector3(0, 7, 0)
+	var m_main = MeshInstance3D.new()
+	var mmm = BoxMesh.new()
+	mmm.size = Vector3(20, 6, 15)
+	mmm.material = _make_mat(Color(0.92, 0.90, 0.85), 0.5, 0.08)
+	m_main.mesh = mmm
+	mansion.add_child(m_main)
+	var mcol = CollisionShape3D.new()
+	mcol.shape = BoxShape3D.new()
+	mcol.shape.size = Vector3(20, 6, 15)
+	mansion.add_child(mcol)
+	add_child(mansion)
+
+	# Columns (grand entrance)
+	for ci in range(4):
+		var col = MeshInstance3D.new()
+		var clm = CylinderMesh.new()
+		clm.height = 5.0
+		clm.top_radius = 0.25
+		clm.bottom_radius = 0.3
+		clm.material = _make_mat(Color(0.9, 0.88, 0.82), 0.4, 0.2)
+		col.mesh = clm
+		col.position = base + Vector3(-4.5 + ci * 3, 6.5, 8)
+		add_child(col)
+
+	# Swimming pool
+	var pool = MeshInstance3D.new()
+	var plm = BoxMesh.new()
+	plm.size = Vector3(8, 0.8, 5)
+	var pool_mat = StandardMaterial3D.new()
+	pool_mat.albedo_color = Color(0.2, 0.5, 0.8, 0.75)
+	pool_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pool_mat.roughness = 0.02
+	plm.material = pool_mat
+	pool.mesh = plm
+	pool.position = base + Vector3(0, 4.0, -12)
+	add_child(pool)
+
+	# Pool edge (white tile)
+	var edge = MeshInstance3D.new()
+	var edm = BoxMesh.new()
+	edm.size = Vector3(9, 0.15, 6)
+	edm.material = _make_mat(Color(0.9, 0.9, 0.88), 0.4)
+	edge.mesh = edm
+	edge.position = base + Vector3(0, 4.4, -12)
+	add_child(edge)
+
+	# Fountain in front
+	var fb = MeshInstance3D.new()
+	var fbm = CylinderMesh.new()
+	fbm.top_radius = 1.8
+	fbm.bottom_radius = 2.0
+	fbm.height = 0.6
+	fbm.material = _make_mat(Color(0.8, 0.78, 0.75), 0.4, 0.2)
+	fb.mesh = fbm
+	fb.position = base + Vector3(0, 4.6, 16)
+	add_child(fb)
+
+func _create_dodger_stadium_sign():
+	# Big sign near the stadium area
+	var base = Vector3(100, 0, 75)
+	_register_zone(base.x, base.z, 20, 20)
+	var sign_mat = StandardMaterial3D.new()
+	sign_mat.albedo_color = Color(0.1, 0.25, 0.6)
+	sign_mat.emission_enabled = true
+	sign_mat.emission = Color(0.15, 0.3, 0.7)
+	sign_mat.emission_energy_multiplier = 0.6
+
+	var sign = MeshInstance3D.new()
+	var sm = BoxMesh.new()
+	sm.size = Vector3(15, 3, 0.3)
+	sm.material = sign_mat
+	sign.mesh = sm
+	sign.position = base + Vector3(0, 10, -35)
+	add_child(sign)
+
+	# "DODGER STADIUM" letters (white blocks)
 	var letter_mat = StandardMaterial3D.new()
 	letter_mat.albedo_color = Color(0.95, 0.95, 0.95)
 	letter_mat.emission_enabled = true
 	letter_mat.emission = Color(1.0, 1.0, 1.0)
-	letter_mat.emission_energy_multiplier = 0.15
+	letter_mat.emission_energy_multiplier = 0.3
 
+	var letters = "DODGERSTADIUM"
 	for i in range(letters.length()):
 		var letter = MeshInstance3D.new()
 		var lm = BoxMesh.new()
-		lm.size = Vector3(3.0, 5.0, 0.5)
+		lm.size = Vector3(0.9, 1.8, 0.15)
 		lm.material = letter_mat
 		letter.mesh = lm
-		letter.position = base + Vector3(-22 + i * 4.0, 22.0, -15)
-		# Slight angle to face the city
-		letter.rotation.y = 0.3
+		letter.position = base + Vector3(-6.5 + i * 1.05, 10, -34.7)
 		add_child(letter)
+
+# ═══ SAVE POINT MARKERS ═══
+func create_save_point_markers():
+	var save_positions = [
+		[Vector3(-120, 0.02, 50), "STARLIGHT MOTEL — SAVE"],
+		[Vector3(22, 0.02, 22), "SAFE HOUSE — SAVE"],
+		[Vector3(120, 0.02, -50), "MEL'S DINER — SAVE"],
+	]
+	for sp in save_positions:
+		var pos = sp[0]
+		_create_save_marker(pos)
+
+func _create_save_marker(pos: Vector3):
+	# Glowing ground disc with rotating outer ring
+	var marker = Node3D.new()
+	marker.position = pos
+	marker.add_to_group("save_point")
+	add_child(marker)
+
+	# Inner disc (golden glow)
+	var disc = MeshInstance3D.new()
+	var dm = CylinderMesh.new()
+	dm.top_radius = 2.5
+	dm.bottom_radius = 2.5
+	dm.height = 0.05
+	var disc_mat = StandardMaterial3D.new()
+	disc_mat.albedo_color = Color(1.0, 0.7, 0.15)
+	disc_mat.emission_enabled = true
+	disc_mat.emission = Color(1.0, 0.6, 0.1)
+	disc_mat.emission_energy_multiplier = 2.5
+	disc_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	disc_mat.albedo_color.a = 0.7
+	dm.material = disc_mat
+	disc.mesh = dm
+	disc.position.y = 0.03
+	marker.add_child(disc)
+
+	# Outer ring
+	var ring = MeshInstance3D.new()
+	var rm = TorusMesh.new()
+	rm.inner_radius = 2.3
+	rm.outer_radius = 2.8
+	var ring_mat = StandardMaterial3D.new()
+	ring_mat.albedo_color = Color(1.0, 0.5, 0.0)
+	ring_mat.emission_enabled = true
+	ring_mat.emission = Color(1.0, 0.4, 0.0)
+	ring_mat.emission_energy_multiplier = 1.8
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring_mat.albedo_color.a = 0.5
+	rm.material = ring_mat
+	ring.mesh = rm
+	ring.position.y = 0.2
+	ring.rotation.x = deg_to_rad(90)
+	marker.add_child(ring)
+
+	# Floating floppy disk icon above
+	var floppy = MeshInstance3D.new()
+	var fm = BoxMesh.new()
+	fm.size = Vector3(0.8, 0.8, 0.15)
+	var floppy_mat = StandardMaterial3D.new()
+	floppy_mat.albedo_color = Color(1.0, 0.6, 0.1)
+	floppy_mat.emission_enabled = true
+	floppy_mat.emission = Color(1.0, 0.5, 0.0)
+	floppy_mat.emission_energy_multiplier = 3.0
+	fm.material = floppy_mat
+	floppy.mesh = fm
+	floppy.position.y = 2.5
+	marker.add_child(floppy)
+
+	# Light column
+	var light = OmniLight3D.new()
+	light.light_color = Color(1.0, 0.6, 0.1)
+	light.light_energy = 2.5
+	light.omni_range = 8.0
+	light.position.y = 1.5
+	marker.add_child(light)

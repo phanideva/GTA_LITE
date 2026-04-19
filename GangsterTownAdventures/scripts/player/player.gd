@@ -23,6 +23,7 @@ var death_timer = 0.0
 var invincibility_timer = 0.0
 var footstep_timer = 0.0
 var vehicle_entry_cooldown = 0.0  # Prevents instant exit after entering
+var intro_mode: bool = false  # Disables all input during cinematic intro
 
 # Weapon system
 enum Weapon { MELEE, PISTOL, RIFLE, SHOTGUN }
@@ -102,6 +103,12 @@ func _input(event):
 
 func _physics_process(delta):
 	if Globals.game_state != "playing":
+		return
+
+	# Intro mode — freeze player, disable all input
+	if intro_mode:
+		velocity = Vector3.ZERO
+		move_and_slide()
 		return
 
 	fire_cooldown -= delta
@@ -208,6 +215,7 @@ func handle_movement(delta):
 func handle_jump():
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_force
+		SFX.play_sfx("player_jump", 0.12)
 
 func handle_combat():
 	if Input.is_action_just_pressed("shoot"):
@@ -439,6 +447,7 @@ func _muzzle_flash():
 
 func melee_attack():
 	SFX.play_sfx("melee", 0.15)
+	SFX.play_sfx("player_grunt", 0.1)
 	var space_state = get_world_3d().direct_space_state
 	var query = PhysicsShapeQueryParameters3D.new()
 	var box = BoxShape3D.new()
@@ -457,6 +466,7 @@ func take_damage(amount: int):
 		return
 	# Play pain grunt
 	SFX.play_sfx("pain", 0.15)
+	SFX.play_sfx("player_grunt", 0.12)
 	# Armor absorbs damage first
 	if armor > 0:
 		var armor_absorb = min(armor, amount)
@@ -488,9 +498,9 @@ func _respawn():
 	invincibility_timer = 5.0  # 5 seconds of invincibility after respawn
 	# Respawn at nearest safe point (hospital locations near sidewalks)
 	var spawn_points = [
-		Vector3(22, 2, 22),
-		Vector3(55, 2, 55),
-		Vector3(-55, 2, -55),
+		Vector3(22, 0.5, 22),
+		Vector3(55, 0.5, 55),
+		Vector3(-55, 0.5, -55),
 	]
 	var best = spawn_points[0]
 	var best_dist = 9999.0

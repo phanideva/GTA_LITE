@@ -683,7 +683,7 @@ static func create_random_civilian() -> CharacterModel:
 	model.is_female = randf() < 0.45
 	model.body_type = randi() % 3  # 0=average, 1=athletic, 2=heavy
 	
-	# Random skin tones (diverse)
+	# Random skin tones (LA diverse population)
 	var skin_tones = [
 		Color(0.95, 0.80, 0.68),   # Light
 		Color(0.87, 0.72, 0.58),   # Medium light
@@ -692,32 +692,67 @@ static func create_random_civilian() -> CharacterModel:
 		Color(0.40, 0.28, 0.20),   # Dark brown
 		Color(0.82, 0.68, 0.55),   # Olive
 		Color(0.92, 0.78, 0.62),   # Peach
+		Color(0.65, 0.48, 0.35),   # Warm brown
+		Color(0.88, 0.75, 0.60),   # Golden
 	]
 	model.skin_color = skin_tones[randi() % skin_tones.size()]
 	
-	# Random shirt colors
-	var shirt_colors = [
-		Color(0.85, 0.85, 0.85), Color(0.15, 0.15, 0.15),
-		Color(0.70, 0.20, 0.20), Color(0.20, 0.40, 0.70),
-		Color(0.25, 0.55, 0.25), Color(0.75, 0.65, 0.20),
-		Color(0.50, 0.25, 0.55), Color(0.9, 0.45, 0.15),
-		Color(0.1, 0.55, 0.55), Color(0.8, 0.3, 0.5),
-	]
-	model.shirt_color = shirt_colors[randi() % shirt_colors.size()]
+	# LA outfit styles — distinct fashion categories
+	var outfit_style = randi() % 8
+	match outfit_style:
+		0:  # Beach/surfer — bright tank top, board shorts
+			var beach_shirts = [Color(0.95, 0.85, 0.2), Color(0.1, 0.8, 0.8), Color(0.95, 0.45, 0.1), Color(0.9, 0.3, 0.5), Color(0.4, 0.85, 0.4)]
+			model.shirt_color = beach_shirts[randi() % beach_shirts.size()]
+			var beach_pants = [Color(0.2, 0.4, 0.7), Color(0.7, 0.3, 0.2), Color(0.3, 0.6, 0.3), Color(0.5, 0.4, 0.3)]
+			model.pants_color = beach_pants[randi() % beach_pants.size()]
+			model.shoe_color = Color(0.6, 0.55, 0.4)  # Sandals
+		1:  # Hollywood/trendy — designer look
+			var trendy_shirts = [Color(0.05, 0.05, 0.05), Color(0.92, 0.92, 0.92), Color(0.7, 0.15, 0.15), Color(0.55, 0.35, 0.6)]
+			model.shirt_color = trendy_shirts[randi() % trendy_shirts.size()]
+			model.pants_color = Color(0.08, 0.08, 0.08) if randf() < 0.6 else Color(0.2, 0.2, 0.25)
+			model.shoe_color = Color(0.1, 0.1, 0.1)  # Designer shoes
+		2:  # Business/corporate — suit colors
+			var suit_colors = [Color(0.12, 0.12, 0.15), Color(0.2, 0.22, 0.28), Color(0.35, 0.33, 0.30), Color(0.15, 0.15, 0.25)]
+			model.shirt_color = Color(0.9, 0.88, 0.85) if randf() < 0.5 else Color(0.6, 0.7, 0.85)
+			model.pants_color = suit_colors[randi() % suit_colors.size()]
+			model.shoe_color = Color(0.12, 0.08, 0.05)
+		3:  # Street/hip-hop — oversized, bold colors
+			var street_shirts = [Color(0.85, 0.1, 0.1), Color(0.1, 0.1, 0.8), Color(0.8, 0.75, 0.1), Color(0.1, 0.6, 0.1), Color(0.5, 0.1, 0.5)]
+			model.shirt_color = street_shirts[randi() % street_shirts.size()]
+			var street_pants = [Color(0.2, 0.2, 0.35), Color(0.08, 0.08, 0.08), Color(0.25, 0.22, 0.18)]
+			model.pants_color = street_pants[randi() % street_pants.size()]
+			model.shoe_color = Color(0.9, 0.9, 0.9)  # White sneakers
+			model.hat_color = model.shirt_color if randf() < 0.4 else Color.TRANSPARENT
+		4:  # Tourist — Hawaiian shirt, cargo shorts
+			var tourist_shirts = [Color(0.9, 0.5, 0.2), Color(0.2, 0.7, 0.5), Color(0.8, 0.3, 0.6), Color(0.3, 0.5, 0.8)]
+			model.shirt_color = tourist_shirts[randi() % tourist_shirts.size()]
+			model.pants_color = Color(0.6, 0.55, 0.45)  # Khaki
+			model.shoe_color = Color(0.5, 0.5, 0.5)
+		5:  # Fitness/athletic — sportswear
+			var gym_shirts = [Color(0.1, 0.1, 0.1), Color(0.8, 0.15, 0.15), Color(0.15, 0.5, 0.8), Color(0.6, 0.1, 0.6)]
+			model.shirt_color = gym_shirts[randi() % gym_shirts.size()]
+			model.pants_color = Color(0.12, 0.12, 0.12)
+			model.shoe_color = Color(0.85, 0.85, 0.85)
+		6:  # Latino/Chicano — flannel, white tee, baggy
+			model.shirt_color = Color(0.95, 0.95, 0.95) if randf() < 0.5 else Color(0.5, 0.2, 0.2)
+			model.pants_color = Color(0.2, 0.2, 0.25) if randf() < 0.6 else Color(0.25, 0.22, 0.18)
+			model.shoe_color = Color(0.1, 0.1, 0.1)
+		7:  # Skater/punk — graphic tee, ripped jeans
+			var punk_shirts = [Color(0.08, 0.08, 0.08), Color(0.7, 0.0, 0.0), Color(0.6, 0.3, 0.0), Color(0.0, 0.5, 0.0)]
+			model.shirt_color = punk_shirts[randi() % punk_shirts.size()]
+			model.pants_color = Color(0.25, 0.28, 0.35)  # Faded denim
+			model.shoe_color = Color(0.15, 0.15, 0.15)
 	
-	# Random pants colors
-	var pants_colors = [
-		Color(0.15, 0.15, 0.30), Color(0.10, 0.10, 0.10),
-		Color(0.35, 0.30, 0.20), Color(0.20, 0.18, 0.15),
-		Color(0.25, 0.25, 0.35), Color(0.4, 0.35, 0.25),
-	]
-	model.pants_color = pants_colors[randi() % pants_colors.size()]
-	
-	# Random hair colors
+	# Random hair colors (more variety for LA)
 	var hair_colors = [
-		Color(0.12, 0.08, 0.05), Color(0.30, 0.18, 0.08),
-		Color(0.75, 0.55, 0.25), Color(0.45, 0.20, 0.10),
-		Color(0.50, 0.50, 0.52), Color(0.65, 0.40, 0.15),
+		Color(0.12, 0.08, 0.05),  # Black
+		Color(0.30, 0.18, 0.08),  # Dark brown
+		Color(0.75, 0.55, 0.25),  # Blonde
+		Color(0.45, 0.20, 0.10),  # Auburn
+		Color(0.50, 0.50, 0.52),  # Gray
+		Color(0.65, 0.40, 0.15),  # Light brown
+		Color(0.85, 0.75, 0.55),  # Platinum blonde
+		Color(0.15, 0.12, 0.08),  # Very dark
 	]
 	model.hair_color = hair_colors[randi() % hair_colors.size()]
 	

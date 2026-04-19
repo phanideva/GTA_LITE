@@ -55,98 +55,232 @@ func _build_car_model():
 	]
 	var car_color = colors[randi() % colors.size()]
 	var types = [
-		{"w": 1.8, "h": 0.65, "l": 4.2, "ch": 0.48, "cl": 2.1},
-		{"w": 1.95, "h": 0.80, "l": 4.6, "ch": 0.60, "cl": 2.3},
-		{"w": 1.7, "h": 0.50, "l": 4.0, "ch": 0.38, "cl": 1.6},
-		{"w": 1.9, "h": 0.75, "l": 4.8, "ch": 0.55, "cl": 1.8},
+		{"w": 1.8, "h": 0.45, "l": 4.2, "ch": 0.48, "cl": 2.1, "wr": 0.28, "rh": 0.50},
+		{"w": 1.95, "h": 0.55, "l": 4.6, "ch": 0.60, "cl": 2.5, "wr": 0.34, "rh": 0.65},
+		{"w": 1.7, "h": 0.35, "l": 4.0, "ch": 0.38, "cl": 1.6, "wr": 0.26, "rh": 0.38},
+		{"w": 1.9, "h": 0.48, "l": 4.8, "ch": 0.55, "cl": 2.0, "wr": 0.30, "rh": 0.48},
 	]
 	var t = types[randi() % types.size()]
 	var bw = t["w"]; var bh = t["h"]; var bl = t["l"]
 	var ch = t["ch"]; var cl = t["cl"]
+	var wr = t["wr"]; var rh = t["rh"]
+	var body_y = rh + bh / 2.0
+	var cabin_y = rh + bh + ch / 2.0
 
-	# Body
+	var body_mat = _make_mat(car_color)
+	var dark_mat = _make_mat(car_color.darkened(0.15))
+	var trim_mat = _make_mat(Color(0.12, 0.12, 0.12))
+	var chrome_mat = StandardMaterial3D.new()
+	chrome_mat.albedo_color = Color(0.8, 0.8, 0.82)
+	chrome_mat.roughness = 0.1
+	chrome_mat.metallic = 0.9
+	var glass_mat = StandardMaterial3D.new()
+	glass_mat.albedo_color = Color(0.5, 0.65, 0.85, 0.45)
+	glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass_mat.roughness = 0.05
+
+	# Main body
 	var body = MeshInstance3D.new()
 	var bm = BoxMesh.new()
-	bm.size = Vector3(bw, bh, bl)
-	bm.material = _make_mat(car_color)
+	bm.size = Vector3(bw - 0.15, bh, bl - 0.4)
+	bm.material = body_mat
 	body.mesh = bm
-	body.position = Vector3(0, 0.55, 0)
+	body.position = Vector3(0, body_y, 0)
 	add_child(body)
+
+	# Tapered hood
+	var hood = MeshInstance3D.new()
+	var hm = BoxMesh.new()
+	hm.size = Vector3(bw - 0.2, bh * 0.7, bl * 0.2)
+	hm.material = body_mat
+	hood.mesh = hm
+	hood.position = Vector3(0, body_y + 0.04, bl * 0.38)
+	hood.rotation.x = -0.12
+	add_child(hood)
+
+	# Rounded front
+	var nose = MeshInstance3D.new()
+	var nm = CylinderMesh.new()
+	nm.top_radius = bh * 0.35
+	nm.bottom_radius = bh * 0.35
+	nm.height = bw - 0.25
+	nm.material = body_mat
+	nose.mesh = nm
+	nose.position = Vector3(0, body_y - bh * 0.1, bl / 2.0 - 0.05)
+	nose.rotation.z = PI / 2
+	add_child(nose)
+
+	# Trunk
+	var trunk_mi = MeshInstance3D.new()
+	var tkm = BoxMesh.new()
+	tkm.size = Vector3(bw - 0.18, bh * 0.6, bl * 0.18)
+	tkm.material = body_mat
+	trunk_mi.mesh = tkm
+	trunk_mi.position = Vector3(0, body_y + 0.03, -bl * 0.38)
+	trunk_mi.rotation.x = 0.12
+	add_child(trunk_mi)
+
+	# Rear round
+	var rr = MeshInstance3D.new()
+	var rrm = CylinderMesh.new()
+	rrm.top_radius = bh * 0.3
+	rrm.bottom_radius = bh * 0.3
+	rrm.height = bw - 0.25
+	rrm.material = body_mat
+	rr.mesh = rrm
+	rr.position = Vector3(0, body_y - bh * 0.1, -bl / 2.0 + 0.05)
+	rr.rotation.z = PI / 2
+	add_child(rr)
+
+	# Fender arches
+	for fp in [
+		Vector3(-bw / 2.0 + 0.05, rh + wr * 0.3, bl * 0.30),
+		Vector3(bw / 2.0 - 0.05, rh + wr * 0.3, bl * 0.30),
+		Vector3(-bw / 2.0 + 0.05, rh + wr * 0.3, -bl * 0.30),
+		Vector3(bw / 2.0 - 0.05, rh + wr * 0.3, -bl * 0.30),
+	]:
+		var fender = MeshInstance3D.new()
+		var fm = SphereMesh.new()
+		fm.radius = wr + 0.06
+		fm.height = wr * 1.0
+		fm.material = body_mat
+		fender.mesh = fm
+		fender.position = fp
+		add_child(fender)
+
+	# Side panels + rocker
+	for side in [-1, 1]:
+		var sp = MeshInstance3D.new()
+		var spm = BoxMesh.new()
+		spm.size = Vector3(0.05, bh * 0.8, bl - 0.8)
+		spm.material = body_mat
+		sp.mesh = spm
+		sp.position = Vector3(side * bw / 2.0, body_y, 0)
+		add_child(sp)
+		var rkr = MeshInstance3D.new()
+		var rkm = BoxMesh.new()
+		rkm.size = Vector3(0.04, 0.06, bl - 1.2)
+		rkm.material = trim_mat
+		rkr.mesh = rkm
+		rkr.position = Vector3(side * (bw / 2.0 - 0.02), rh + 0.03, 0)
+		add_child(rkr)
 
 	# Cabin
 	var cabin = MeshInstance3D.new()
 	var cm = BoxMesh.new()
-	cm.size = Vector3(bw - 0.2, ch, cl)
-	cm.material = _make_mat(car_color.darkened(0.1))
+	cm.size = Vector3(bw - 0.25, ch * 0.85, cl)
+	cm.material = dark_mat
 	cabin.mesh = cm
-	cabin.position = Vector3(0, 0.55 + bh / 2 + ch / 2, -0.2)
+	cabin.position = Vector3(0, cabin_y, -bl * 0.05)
 	add_child(cabin)
+
+	# Roof arc
+	var roof = MeshInstance3D.new()
+	var rfm = CylinderMesh.new()
+	rfm.top_radius = (bw - 0.3) / 2.0 - 0.06
+	rfm.bottom_radius = (bw - 0.3) / 2.0
+	rfm.height = cl * 0.85
+	rfm.material = body_mat
+	roof.mesh = rfm
+	roof.position = Vector3(0, cabin_y + ch * 0.42, -bl * 0.05)
+	roof.rotation.x = PI / 2
+	add_child(roof)
 
 	# Windshield
 	var windshield = MeshInstance3D.new()
 	var wm = BoxMesh.new()
-	wm.size = Vector3(bw - 0.3, ch - 0.05, 0.05)
-	var glass_mat = StandardMaterial3D.new()
-	glass_mat.albedo_color = Color(0.5, 0.65, 0.85, 0.4)
-	glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	glass_mat.roughness = 0.1
+	wm.size = Vector3(bw - 0.35, ch * 0.75, 0.04)
 	wm.material = glass_mat
 	windshield.mesh = wm
-	windshield.position = Vector3(0, 0.55 + bh / 2 + ch / 2, cl / 2 - 0.1)
-	windshield.rotation.x = -0.2
+	windshield.position = Vector3(0, cabin_y + ch * 0.05, cl / 2.0 - 0.08)
+	windshield.rotation.x = -0.30
 	add_child(windshield)
 
 	# Rear window
 	var rear_w = MeshInstance3D.new()
-	rear_w.mesh = wm
-	rear_w.position = Vector3(0, 0.55 + bh / 2 + ch / 2, -cl / 2 - 0.1)
-	rear_w.rotation.x = 0.2
+	var rwm = BoxMesh.new()
+	rwm.size = Vector3(bw - 0.35, ch * 0.65, 0.04)
+	rwm.material = glass_mat
+	rear_w.mesh = rwm
+	rear_w.position = Vector3(0, cabin_y + ch * 0.05, -cl / 2.0 + 0.08)
+	rear_w.rotation.x = 0.25
 	add_child(rear_w)
 
 	# Headlights
 	for side in [-1, 1]:
 		var hl = MeshInstance3D.new()
 		var hlm = SphereMesh.new()
-		hlm.radius = 0.1
+		hlm.radius = 0.06
+		hlm.height = 0.07
 		var hl_mat = StandardMaterial3D.new()
-		hl_mat.albedo_color = Color(1.0, 1.0, 0.9)
+		hl_mat.albedo_color = Color(1.0, 1.0, 0.95)
 		hl_mat.emission_enabled = true
-		hl_mat.emission = Color(1.0, 1.0, 0.8)
-		hl_mat.emission_energy_multiplier = 0.3
+		hl_mat.emission = Color(1.0, 0.98, 0.85)
+		hl_mat.emission_energy_multiplier = 0.4
 		hlm.material = hl_mat
 		hl.mesh = hlm
-		hl.position = Vector3(side * 0.7, 0.5, bl / 2.0)
+		hl.position = Vector3(side * (bw / 2.0 - 0.22), body_y + bh * 0.1, bl / 2.0 + 0.04)
 		add_child(hl)
 
 	# Taillights
 	for side in [-1, 1]:
 		var tl = MeshInstance3D.new()
 		var tlm = BoxMesh.new()
-		tlm.size = Vector3(0.18, 0.08, 0.04)
+		tlm.size = Vector3(0.22, 0.08, 0.05)
 		var tl_mat = StandardMaterial3D.new()
-		tl_mat.albedo_color = Color(0.8, 0.05, 0.05)
+		tl_mat.albedo_color = Color(0.85, 0.05, 0.05)
 		tl_mat.emission_enabled = true
-		tl_mat.emission = Color(0.7, 0.0, 0.0)
-		tl_mat.emission_energy_multiplier = 0.3
+		tl_mat.emission = Color(0.8, 0.0, 0.0)
+		tl_mat.emission_energy_multiplier = 0.4
 		tlm.material = tl_mat
 		tl.mesh = tlm
-		tl.position = Vector3(side * 0.7, 0.5, -bl / 2.0)
+		tl.position = Vector3(side * (bw / 2.0 - 0.2), body_y + bh * 0.05, -bl / 2.0 - 0.01)
 		add_child(tl)
 
-	# Wheels
-	for x in [-bw / 2 + 0.05, bw / 2 - 0.05]:
-		for z in [-bl * 0.3, bl * 0.3]:
-			var wheel = MeshInstance3D.new()
-			var whl = CylinderMesh.new()
-			whl.top_radius = 0.25
-			whl.bottom_radius = 0.25
-			whl.height = 0.15
-			whl.material = _make_mat(Color(0.1, 0.1, 0.1))
-			wheel.mesh = whl
-			wheel.position = Vector3(x, 0.2, z)
-			wheel.rotation.z = PI / 2
-			add_child(wheel)
-			wheel_nodes.append(wheel)
+	# Grille
+	var grille = MeshInstance3D.new()
+	var gm = BoxMesh.new()
+	gm.size = Vector3(bw * 0.5, bh * 0.5, 0.04)
+	gm.material = chrome_mat
+	grille.mesh = gm
+	grille.position = Vector3(0, body_y - bh * 0.15, bl / 2.0 + 0.02)
+	add_child(grille)
+
+	# Bumpers
+	for z_side in [1, -1]:
+		var bumper = MeshInstance3D.new()
+		var bum = BoxMesh.new()
+		bum.size = Vector3(bw + 0.02, 0.15, 0.10)
+		bum.material = dark_mat
+		bumper.mesh = bum
+		bumper.position = Vector3(0, rh + 0.10, z_side * (bl / 2.0 + 0.05))
+		add_child(bumper)
+
+	# Wheels (torus tires + cylinder rims)
+	for x in [-bw / 2.0 + 0.05, bw / 2.0 - 0.05]:
+		for z in [-bl * 0.30, bl * 0.30]:
+			var tire = MeshInstance3D.new()
+			var tm = TorusMesh.new()
+			tm.inner_radius = wr * 0.55
+			tm.outer_radius = wr
+			tm.material = _make_mat(Color(0.08, 0.08, 0.08))
+			tm.material.roughness = 0.95
+			tire.mesh = tm
+			tire.position = Vector3(x, wr, z)
+			tire.rotation.z = PI / 2
+			add_child(tire)
+			wheel_nodes.append(tire)
+
+			var rim = MeshInstance3D.new()
+			var rmm = CylinderMesh.new()
+			rmm.top_radius = wr * 0.5
+			rmm.bottom_radius = wr * 0.5
+			rmm.height = 0.05
+			rmm.material = chrome_mat
+			rim.mesh = rmm
+			rim.position = Vector3(x, wr, z)
+			rim.rotation.z = PI / 2
+			add_child(rim)
 
 func _add_npc_driver():
 	var CharModel = load("res://scripts/utils/character_model.gd")
