@@ -323,6 +323,29 @@ func _add_building(pos: Vector3, size: Vector3, color: Color):
 	else:
 		style = 3  # Periphery: industrial
 
+	# ═══ KENNEY GLB PATH ═══
+	# Use real Kenney building art when available. Style 0/1 → commercial, 2/3 → suburban.
+	var glb_filter = "building-skyscraper" if style == 0 else ("building-" if style == 1 else "building-type-")
+	var glb := AssetLoader.pick_random_filtered("building", glb_filter)
+	if glb == null:
+		glb = AssetLoader.pick_random_any("building")
+	if glb != null:
+		var inst = glb.instantiate()
+		# Kenney buildings are roughly 4-unit grid blocks. Scale to fit requested footprint and height.
+		var scale_xz = max(size.x, size.z) / 4.5
+		var scale_y = max(size.y / 6.0, scale_xz)  # Buildings stretch vertically for towers
+		inst.scale = Vector3(scale_xz, scale_y, scale_xz)
+		inst.position = Vector3(0, -size.y / 2.0, 0)  # GLB pivot is at base
+		inst.rotation.y = (randi() % 4) * (PI * 0.5)  # cardinal rotations only
+		body.add_child(inst)
+		var col = CollisionShape3D.new()
+		var shape = BoxShape3D.new()
+		shape.size = size
+		col.shape = shape
+		body.add_child(col)
+		add_child(body)
+		return
+
 	var base_mat = _make_mat(color, 0.6, 0.05)
 	var dark_mat = _make_mat(color.darkened(0.2), 0.7, 0.05)
 	var accent_color = color.lightened(0.15)
@@ -749,8 +772,11 @@ func create_trees():
 			_add_tree(Vector3(x, 0, z))
 
 func _add_tree(pos: Vector3):
-	# Try GLB first (Kenney Nature Kit); fall back to procedural
-	var glb = AssetLoader.load_or_null("res://assets/models/nature/tree_oak.glb")
+	# Try GLB first (Kenney Nature Kit trees); fall back to procedural.
+	# Use any tree_* GLB except palms (palms handled by _add_palm_tree).
+	var glb := AssetLoader.pick_random_filtered("nature", "tree_")
+	if glb and String(glb.resource_path).find("palm") >= 0:
+		glb = null  # don't double-up palms here
 	if glb:
 		var inst = glb.instantiate()
 		inst.position = pos
@@ -1245,8 +1271,8 @@ func create_ocean_and_beach():
 	_add_lifeguard_tower(Vector3(-60, 0, 140))
 
 func _add_palm_tree(pos: Vector3):
-	# Try GLB first (Kenney Nature Kit etc.); fall back to procedural
-	var glb = AssetLoader.load_or_null("res://assets/models/nature/palm_tree.glb")
+	# Try GLB first (Kenney Nature Kit palms); fall back to procedural
+	var glb = AssetLoader.pick_random_filtered("nature", "palm")
 	if glb:
 		var inst = glb.instantiate()
 		inst.position = pos
@@ -2114,6 +2140,14 @@ func _create_parking_lots():
 			_add_parked_car(lot_pos + Vector3(car_x, 0, car_z))
 
 func _add_parked_car(pos: Vector3):
+	# ═══ KENNEY GLB PATH ═══
+	var glb := AssetLoader.pick_random_any("vehicle")
+	if glb != null:
+		var inst = glb.instantiate()
+		inst.position = pos
+		inst.rotation.y = randf_range(-0.1, 0.1) + (PI if randf() > 0.5 else 0)
+		add_child(inst)
+		return
 	var car = Node3D.new()
 	car.position = pos
 	

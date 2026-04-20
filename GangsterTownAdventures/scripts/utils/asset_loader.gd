@@ -33,6 +33,51 @@ const _BASE_PATHS := {
 }
 
 var _cache: Dictionary = {}
+var _category_scan: Dictionary = {}  # category -> Array[String] of resource paths
+
+func _scan_category(category: String) -> Array:
+	if _category_scan.has(category):
+		return _category_scan[category]
+	var out: Array = []
+	if not _BASE_PATHS.has(category):
+		_category_scan[category] = out
+		return out
+	var base: String = _BASE_PATHS[category]
+	var dir = DirAccess.open(base)
+	if dir == null:
+		_category_scan[category] = out
+		return out
+	dir.list_dir_begin()
+	while true:
+		var f := dir.get_next()
+		if f == "":
+			break
+		if dir.current_is_dir():
+			continue
+		if f.ends_with(".glb") or f.ends_with(".gltf") or f.ends_with(".tscn"):
+			out.append(base + f)
+	dir.list_dir_end()
+	out.sort()
+	_category_scan[category] = out
+	return out
+
+func pick_random_any(category: String) -> PackedScene:
+	var paths := _scan_category(category)
+	if paths.is_empty():
+		return null
+	return load_or_null(paths[randi() % paths.size()])
+
+func pick_random_filtered(category: String, substring_match: String) -> PackedScene:
+	var paths := _scan_category(category)
+	if paths.is_empty():
+		return null
+	var matches: Array = []
+	for p in paths:
+		if String(p).get_file().to_lower().find(substring_match.to_lower()) >= 0:
+			matches.append(p)
+	if matches.is_empty():
+		return null
+	return load_or_null(matches[randi() % matches.size()])
 
 func load_or_null(path: String) -> PackedScene:
 	if _cache.has(path):

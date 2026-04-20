@@ -157,8 +157,11 @@ func _physics_process(delta):
 			if model_root:
 				model_root.visible = true
 			return
+		# Hide player model only for closed vehicles (cars). Open vehicles (bike/motorcycle)
+		# keep the rider visible.
+		var is_open_vehicle: bool = current_vehicle.get("is_bicycle") != null  # motorcycle.gd has is_bicycle property
 		if model_root:
-			model_root.visible = false
+			model_root.visible = is_open_vehicle
 		# Handle exit from inside vehicle
 		if Input.is_action_just_pressed("interact") and current_vehicle and vehicle_entry_cooldown <= 0:
 			current_vehicle.exit_vehicle()

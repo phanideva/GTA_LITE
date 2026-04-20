@@ -387,7 +387,7 @@ func spawn_npcs():
 			sidewalk_spots.append(Vector3(i * 50 + 6, 0.5, j * 50 + 6))
 			sidewalk_spots.append(Vector3(i * 50 - 6, 0.5, j * 50 - 6))
 	sidewalk_spots.shuffle()
-	var count = mini(140, sidewalk_spots.size())
+	var count = mini(90, sidewalk_spots.size())
 	var spawned_n = 0
 	for i in range(sidewalk_spots.size()):
 		if spawned_n >= count:
@@ -409,7 +409,7 @@ func spawn_police():
 		return
 	var placed_p = 0
 	var tries_p = 0
-	while placed_p < 30 and tries_p < 400:
+	while placed_p < 20 and tries_p < 400:
 		tries_p += 1
 		var x = randf_range(20, 500) * (1 if randi() % 2 == 0 else -1)
 		var z = randf_range(20, 500) * (1 if randi() % 2 == 0 else -1)
@@ -429,7 +429,7 @@ func spawn_gangsters():
 		return
 	var placed_g = 0
 	var tries_g = 0
-	while placed_g < 40 and tries_g < 500:
+	while placed_g < 28 and tries_g < 500:
 		tries_g += 1
 		var x = randf_range(30, 500) * (1 if randi() % 2 == 0 else -1)
 		var z = randf_range(30, 500) * (1 if randi() % 2 == 0 else -1)
@@ -449,12 +449,12 @@ func spawn_traffic():
 		push_error("[SPAWN] Failed to load traffic.tscn!")
 		return
 	var road_starts = []
-	for road_x_idx in range(-10, 11, 2):
+	for road_x_idx in range(-10, 11, 3):
 		var road_x = road_x_idx * 50
 		var lane_offset = 2.0 if randi() % 2 == 0 else -2.0
 		var start_z = randf_range(-500, 500)
 		road_starts.append({"pos": Vector3(road_x + lane_offset, 0.2, start_z), "axis": "ns"})
-	for road_z_idx in range(-10, 11, 2):
+	for road_z_idx in range(-10, 11, 3):
 		var road_z = road_z_idx * 50
 		var lane_offset = 2.0 if randi() % 2 == 0 else -2.0
 		var start_x = randf_range(-500, 500)
@@ -486,7 +486,7 @@ func spawn_vehicles():
 				var side = 4.8 if randi() % 2 == 0 else -4.8
 				positions.append(Vector3(offset_x, 0.2, road_z + side))
 	positions.shuffle()
-	var count = mini(120, positions.size())
+	var count = mini(75, positions.size())
 	var spawned = 0
 	var placed_zones: Array = []  # Simple overlap check for vehicles
 	for i in range(positions.size()):

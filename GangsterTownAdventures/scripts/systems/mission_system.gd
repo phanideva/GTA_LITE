@@ -78,6 +78,11 @@ func _ready():
 	add_to_group("mission_system")
 
 func _process(delta):
+	# Hide the in-world marker during cutscenes / mission-title flashes
+	if mission_marker and is_instance_valid(mission_marker):
+		var cs = get_node_or_null("/root/Cutscene")
+		var hidden: bool = cs != null and cs.has_method("is_active") and cs.is_active()
+		mission_marker.visible = not hidden
 	if not is_mission_active:
 		return
 	if current_mission.get("time_limit", 0) > 0:

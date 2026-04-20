@@ -236,8 +236,9 @@ func player_entered(p: Node3D):
 	entry_cooldown = 0.5  # Prevent instant exit
 	p.global_position = global_position + Vector3(0, 1.2, 0)
 	p.is_in_vehicle = true
+	# Open vehicle: keep player model visible — they sit on the bike
 	if p.model_root:
-		p.model_root.visible = false
+		p.model_root.visible = true
 	# Engine sound (if not bicycle) — guard against duplicate
 	if not is_bicycle and get_node_or_null("EngineLoop") == null:
 		var eng = AudioStreamPlayer.new()

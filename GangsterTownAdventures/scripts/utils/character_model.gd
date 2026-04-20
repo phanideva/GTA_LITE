@@ -85,6 +85,24 @@ func _add_mesh(parent: Node3D, mesh: Mesh,
 
 # ─────────────────────────────────────────────────────
 func build():
+	# ═══ KENNEY GLB PATH ═══
+	# If Kenney Mini Characters GLBs are installed, use one and skip procedural assembly.
+	# Animation code (animate_walk/reset_pose) null-checks limb refs so leaving them null
+	# disables limb swinging while still allowing body_node bob via the wrapper.
+	var filter = "female" if is_female else "male"
+	var glb := AssetLoader.pick_random_filtered("character", "character-" + filter)
+	if glb == null:
+		glb = AssetLoader.pick_random_filtered("character", "character-")
+	if glb != null:
+		body_node = Node3D.new()
+		body_node.name = "Body"
+		add_child(body_node)
+		var inst = glb.instantiate()
+		# Kenney mini-characters are ~1.7 m tall at unit scale; matches game proportions.
+		inst.scale = Vector3.ONE
+		body_node.add_child(inst)
+		return
+
 	# Apply body shape based on gender/type
 	if is_female:
 		# Slightly different proportions

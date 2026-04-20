@@ -47,6 +47,17 @@ func _make_mat(color: Color) -> StandardMaterial3D:
 	return mat
 
 func _build_car_model():
+	# ═══ KENNEY GLB PATH ═══
+	# Use real Kenney Car Kit assets when available; bypass procedural assembly entirely.
+	var pool := ["sedan", "suv", "hatchback", "truck", "van", "taxi", "delivery"]
+	var glb := AssetLoader.pick_random_filtered("vehicle", pool[randi() % pool.size()])
+	if glb == null:
+		glb = AssetLoader.pick_random_any("vehicle")
+	if glb != null:
+		var inst = glb.instantiate()
+		add_child(inst)
+		return
+
 	var colors = [
 		Color(0.7, 0.15, 0.15), Color(0.15, 0.15, 0.7), Color(0.85, 0.85, 0.85),
 		Color(0.12, 0.12, 0.12), Color(0.15, 0.55, 0.15), Color(0.8, 0.65, 0.1),

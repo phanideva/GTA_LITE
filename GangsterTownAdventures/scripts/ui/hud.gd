@@ -40,6 +40,8 @@ const VC_GREEN = Color(0.2, 0.9, 0.3)
 
 func _ready():
 	add_to_group("hud")
+	# Run while game is paused so ESC can resume
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 	# ── Top-right info block (Vice City style) ──
 	# Time (top right)
@@ -171,6 +173,16 @@ func _process(_delta):
 	if not player:
 		return
 
+	# ── Suppress all transient prompts/labels while a cutscene or mission-title is on ──
+	var cs = get_node_or_null("/root/Cutscene")
+	var in_cutscene: bool = cs != null and cs.has_method("is_active") and cs.is_active()
+	if in_cutscene:
+		interact_label.visible = false
+		objective_label.visible = false
+		mission_desc_label.visible = false
+		mission_timer_label.visible = false
+		return
+
 	# ── Damage vignette ──
 	if player and not player.is_dead:
 		var hp_ratio = float(player.health) / float(player.max_health)
@@ -264,8 +276,11 @@ func _process(_delta):
 			objective_label.visible = true
 		elif m.get("type") == "reach_zone":
 			var dist = player.global_position.distance_to(m["marker"])
-			objective_label.text = "Go to marker — %dm" % int(dist)
-			objective_label.visible = true
+			if dist > 3.0:
+				objective_label.text = "Go to marker — %dm" % int(dist)
+				objective_label.visible = true
+			else:
+				objective_label.visible = false
 		elif m.get("type") == "vehicle_deliver":
 			if player.is_in_vehicle:
 				var dist = player.global_position.distance_to(m["marker"])
@@ -318,15 +333,19 @@ func _process(_delta):
 			if not is_instance_valid(v):
 				continue
 			var v_xz = Vector2(v.global_position.x, v.global_position.z)
-			if p_xz.distance_to(v_xz) < 8.0:
+			if p_xz.distance_to(v_xz) < 3.5:
 				near_vehicle = true
 				break
 		if not near_vehicle:
 			for v in get_tree().get_nodes_in_group("traffic"):
 				if not is_instance_valid(v):
 					continue
+				# Only stationary or near-stationary traffic counts as enterable
+				var spd = v.get("current_speed")
+				if spd != null and abs(spd) > 5.0:
+					continue
 				var v_xz = Vector2(v.global_position.x, v.global_position.z)
-				if p_xz.distance_to(v_xz) < 8.0:
+				if p_xz.distance_to(v_xz) < 3.5:
 					near_vehicle = true
 					break
 		# Save point prompt overrides vehicle prompt
@@ -355,8 +374,11 @@ func _process(_delta):
 		chapter_label.text = ms.get_story_progress_text()
 
 func _input(event):
-	if event.is_action_pressed("ui_cancel"):
+	# Robust ESC: action OR raw key
+	var esc_pressed: bool = event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE)
+	if esc_pressed:
 		toggle_pause()
+		get_viewport().set_input_as_handled()
 
 func toggle_pause():
 	is_paused = !is_paused

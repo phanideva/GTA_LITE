@@ -50,6 +50,28 @@ func _build_car_model():
 	if vehicle_type == "sedan":
 		vehicle_type = types[randi() % types.size()]
 
+	# ═══ KENNEY GLB PATH ═══
+	# If a Kenney Car Kit GLB is available, use the real model and skip procedural meshes.
+	var kenney_filter := "sedan"
+	match vehicle_type:
+		"sedan": kenney_filter = "sedan"
+		"sports": kenney_filter = "sports"
+		"suv": kenney_filter = "suv"
+		"pickup": kenney_filter = "truck"
+		"van": kenney_filter = "van"
+		"muscle": kenney_filter = "hatchback"
+		_: kenney_filter = "sedan"
+	var car_glb := AssetLoader.pick_random_filtered("vehicle", kenney_filter)
+	if car_glb == null:
+		car_glb = AssetLoader.pick_random_filtered("vehicle", "sedan")
+	if car_glb != null:
+		var inst = car_glb.instantiate()
+		inst.scale = Vector3.ONE  # Kenney cars are ~1 m unit space; matches game scale
+		inst.position = Vector3(0, 0, 0)
+		# Kenney cars come with built-in vibrant colors — keep them as-is for visual variety.
+		add_child(inst)
+		return
+
 	# --- Dimensions per vehicle type ---
 	var bw: float; var bh: float; var bl: float
 	var cabin_h: float; var cabin_l: float; var wheel_r: float; var ride_h: float

@@ -22,6 +22,9 @@ var _skip_hint     : Label
 var _mission_title : Label   # big GTA-style mission card
 var _title_timer   := 0.0
 
+func is_active() -> bool:
+	return _active or _title_timer > 0.0
+
 func _ready():
 	layer = 20
 	_build_ui()
