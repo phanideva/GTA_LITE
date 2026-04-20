@@ -197,6 +197,77 @@ GangsterTownAdventures/
 - **Audio:** Real-time procedural sound generation (no external audio files)
 
 ## 🛠️ Technologies Used
+---
+
+## Build & Distribution (Git LFS and Releases)
+
+The Windows build (`GangsterTownAdventures.exe`) is exported to `GangsterTownAdventures/build/`.
+
+Because the build is larger than GitHub's 100 MB limit, the repository uses Git LFS for the executable. Current status:
+
+- The `build/GangsterTownAdventures.exe` file is tracked with Git LFS in branch `Dev`.
+- Git LFS objects were uploaded and the `Dev` branch was rewritten to store the file as an LFS pointer.
+
+If you prefer distributing builds via GitHub Releases (recommended for public downloads), create a release and attach the `.exe` as an asset instead of committing it to the repository.
+
+Quick commands — create a release with GitHub CLI:
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+gh release create v1.0.0 GangsterTownAdventures/build/GangsterTownAdventures.exe --title "v1.0.0" --notes "Windows build"
+```
+
+### Why we used Git LFS
+
+- Keeps repository small for source history while storing large binary artifacts separately.
+- Collaborators must have `git-lfs` installed to fetch LFS objects.
+
+## Collaborator: How to sync this repo (after LFS changes)
+
+If you've cloned before the LFS migration or haven't pulled the new `Dev` branch, run:
+
+```powershell
+git lfs install
+git fetch origin
+git checkout Dev
+# Make sure you match remote exactly if history was rewritten
+git reset --hard origin/Dev
+git lfs pull
+```
+
+Notes:
+- The `reset --hard` is necessary if the branch history was rewritten (force-pushed). This will discard local divergent commits — stash or backup first if needed.
+
+## Where to modify the game (quick guide)
+
+- Player controller & camera: `scripts/player/player.gd` — modify movement, camera pivoting, visibility handling.
+- Game startup and intro: `scripts/main.gd` — spawn counts, intro flow, mission initialization.
+- Mission definitions & timers: `scripts/systems/story_missions.gd` — edit missions, objectives, rewards, and `get_time_remaining()` logic.
+- Vehicles: `scripts/vehicles/vehicle.gd` and `scripts/vehicles/motorcycle.gd` — entry/exit logic, physics tuning.
+- HUD and UI: `scripts/ui/hud.gd`, `scripts/ui/minimap.gd`, `scripts/ui/main_menu.gd` — HUD layout, minimap POIs, menu options.
+- Save/load behaviour: `scripts/systems/save_load.gd` — serialization and safety checks.
+- Audio: `scripts/systems/sfx_manager.gd` and `scripts/systems/radio_system.gd` — procedural SFX and radio stations.
+
+Open those files in the `scripts/` folder and edit with Godot or a code editor. After changes, run the game in Godot (F5) to test.
+
+## Shortcut & Icon
+
+- A desktop shortcut script `create_shortcut.ps1` exists and now references `build/GangsterTownAdventures.ico`.
+- The icon was generated and saved to `GangsterTownAdventures/build/GangsterTownAdventures.ico` during packaging.
+
+To recreate the shortcut manually, run:
+
+```powershell
+.\create_shortcut.ps1
+```
+
+## Next steps & recommendations
+
+- For public distribution, publish a GitHub Release and attach the `.exe` so downloads don't rely on LFS.
+- Keep large binary artifacts out of the main branch if you prefer a small repo — use Releases or an external storage bucket.
+- Add CI to build and upload release artifacts automatically (GitHub Actions recommended). See `BUILD_NOTES.md` for export commands.
+
 
 - **Godot Engine:** 4.6.2 (editor & export templates)
 - **Scripting:** GDScript 2.0 (Godot native scripting)
