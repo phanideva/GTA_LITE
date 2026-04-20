@@ -7,7 +7,7 @@ extends CharacterBody3D
 
 var direction = Vector3.ZERO
 var shooter: Node3D = null  # Set by whoever fires; bullet won't damage its owner
-var spawn_immunity_time = 0.05  # Brief immunity period after spawn to prevent self-hits
+var spawn_immunity_time = 0.008  # Tiny immunity to skip just the first frame
 var spawn_timer = 0.0
 var is_active = false  # Don't check collisions until fully spawned
 

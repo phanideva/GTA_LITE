@@ -185,47 +185,50 @@ func _build_legs():
 func _build_torso():
 	var tm = _cloth_mat(shirt_color)
 	var skin = _skin_mat(skin_color)
-	
-	# ── Pelvis/Hips ──
-	var pelvis = BoxMesh.new()
-	pelvis.size = Vector3(0.32, 0.12, 0.20)
+
+	# ── Pelvis/Hips (rounded capsule for a smoother silhouette) ──
+	var pelvis = CapsuleMesh.new()
+	pelvis.radius = 0.155
+	pelvis.height = 0.24
 	pelvis.material = _cloth_mat(pants_color)
-	_add_mesh(body_node, pelvis, Vector3(0, TORSO_Y - 0.04, 0))
-	
-	# ── Lower torso (waist) ──
+	_add_mesh(body_node, pelvis, Vector3(0, TORSO_Y - 0.02, 0), Vector3(0, 0, PI / 2.0))
+
+	# ── Lower torso (waist) — slightly narrower cylinder ──
 	var waist = CylinderMesh.new()
-	waist.top_radius = 0.165
-	waist.bottom_radius = 0.155
-	waist.height = 0.15
+	waist.top_radius = 0.16
+	waist.bottom_radius = 0.15
+	waist.height = 0.16
 	waist.material = tm
-	_add_mesh(body_node, waist, Vector3(0, TORSO_Y + 0.08, 0))
-	
-	# ── Main chest ──
-	var chest = BoxMesh.new()
-	chest.size = Vector3(0.38, TORSO_H * 0.55, 0.22)
+	_add_mesh(body_node, waist, Vector3(0, TORSO_Y + 0.09, 0))
+
+	# ── Main chest (capsule for smooth Tommy Vercetti-style chest) ──
+	var chest = CapsuleMesh.new()
+	chest.radius = 0.20
+	chest.height = TORSO_H * 0.70
 	chest.material = tm
 	_add_mesh(body_node, chest, Vector3(0, TORSO_MID + 0.06, 0))
-	
-	# ── Shoulder area (wider upper body) ──
-	var shoulders = BoxMesh.new()
-	shoulders.size = Vector3(0.44, 0.10, 0.20)
+
+	# ── Shoulder area — broad capsule for natural shoulders ──
+	var shoulders = CapsuleMesh.new()
+	shoulders.radius = 0.10
+	shoulders.height = 0.46
 	shoulders.material = tm
-	_add_mesh(body_node, shoulders, Vector3(0, SHOULDER_Y - 0.02, 0))
-	
+	_add_mesh(body_node, shoulders, Vector3(0, SHOULDER_Y - 0.02, 0), Vector3(0, 0, PI / 2.0))
+
 	# ── Shoulder caps ──
 	for side in [-1, 1]:
 		var scap = SphereMesh.new()
-		scap.radius = 0.065
-		scap.height = 0.10
+		scap.radius = 0.075
+		scap.height = 0.12
 		scap.material = tm
-		_add_mesh(body_node, scap, Vector3(side * 0.20, SHOULDER_Y, 0))
+		_add_mesh(body_node, scap, Vector3(side * 0.21, SHOULDER_Y, 0))
 
 	# ── Collar / V-neck detail ──
 	var collar = BoxMesh.new()
 	collar.size = Vector3(0.22, 0.05, 0.08)
 	collar.material = _cloth_mat(shirt_color.lightened(0.05))
 	_add_mesh(body_node, collar, Vector3(0, NECK_Y - 0.02, 0.09))
-	
+
 	# ── Visible neck skin at collar ──
 	var neck_skin = CylinderMesh.new()
 	neck_skin.top_radius = 0.05

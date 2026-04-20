@@ -443,9 +443,9 @@ func complete_mission():
 	for hud in get_tree().get_nodes_in_group("hud"):
 		if hud.has_method("update_mission"):
 			if story_progress < story_missions.size():
-				hud.update_mission("Press M for next mission: " + story_missions[story_progress]["title"])
+				hud.update_mission("Next: " + story_missions[story_progress]["title"])
 			else:
-				hud.update_mission("STORY COMPLETE! Press M for side missions.")
+				hud.update_mission("STORY COMPLETE — Free Roam unlocked.")
 
 func fail_mission():
 	if not is_mission_active:

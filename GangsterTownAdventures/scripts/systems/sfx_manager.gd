@@ -350,127 +350,166 @@ func _gen_bird_chirp() -> AudioStream:
 
 # ═══════════════════════ INTRO MUSIC ═══════════════════════
 func generate_intro_music() -> AudioStream:
-	# GTA-style cinematic hip-hop theme — punchy drums, deep bass, smooth synths
+	# Vice City-style synth-wave theme — sustained chord pads, melodic lead,
+	# tight kick/snare, deep sub bass. Stereo for richness.
 	var rate = 44100
-	var duration = 16.0
+	var duration = 22.0
 	var samples = int(rate * duration)
 	var stream = AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = rate
-	stream.stereo = false
+	stream.stereo = true
 
 	var data = PackedByteArray()
-	data.resize(samples * 2)
+	data.resize(samples * 4)  # 16-bit stereo = 4 bytes per frame
 
-	var bpm = 90.0
+	var bpm = 88.0
 	var beat = 60.0 / bpm
 	var bar = beat * 4.0
-	
-	# Minor key bass notes (Am pentatonic feel)
-	var bass_pattern = [55.0, 55.0, 65.41, 73.42, 55.0, 49.0, 55.0, 65.41]
-	# Melody notes (A minor pentatonic)
-	var melody_notes = [440.0, 523.25, 587.33, 659.26, 523.25, 440.0, 392.0, 440.0,
-						523.25, 587.33, 523.25, 440.0, 392.0, 349.23, 392.0, 440.0]
-	# Chord pads (Am, Dm, Em, Am)
+
+	# Am - F - C - G progression (classic synthwave)
+	# Bass roots
+	var bass_notes = [55.0, 43.65, 65.41, 49.0]  # A1, F1, C2, G1
+	# Lead melody (A minor pentatonic, longer sustained notes)
+	var lead_notes = [
+		440.0, 0.0, 523.25, 587.33,  # bar 1: A4 _ C5 D5
+		659.26, 0.0, 587.33, 523.25, # bar 2: E5 _ D5 C5
+		523.25, 0.0, 440.0, 392.0,   # bar 3: C5 _ A4 G4
+		440.0, 523.25, 587.33, 659.26, # bar 4: A4 C5 D5 E5
+	]
+	# Chord triads (stereo-spread)
 	var chord_sets = [
-		[220.0, 261.63, 329.63],  # Am
-		[146.83, 174.61, 220.0],  # Dm
-		[164.81, 207.65, 246.94],  # Em
-		[220.0, 261.63, 329.63],  # Am
+		[220.0, 261.63, 329.63],   # Am
+		[174.61, 220.0, 261.63],   # F
+		[261.63, 329.63, 392.0],   # C
+		[196.0, 246.94, 293.66],   # G
 	]
 
+	# Soft kick sample synthesis — clean 808 sub
 	for i in range(samples):
 		var t = float(i) / rate
-		var val = 0.0
+		var left = 0.0
+		var right = 0.0
 
 		var beat_num = int(t / beat)
 		var beat_pos = fmod(t, beat)
 		var bar_num = int(t / bar)
 		var bar_pos = fmod(t, bar)
 
-		# === KICK DRUM — boom on 1 and 3, ghost on 2.5 ===
-		var kick_hits = [0.0, beat * 2.0, beat * 2.5]
-		for kh in kick_hits:
-			var kt = bar_pos - kh
-			if kt >= 0 and kt < 0.2:
-				var kick_env = pow(max(0.0, 1.0 - kt * 12.0), 2.0)
-				var kick_freq = 50.0 + 80.0 * max(0.0, 1.0 - kt * 15.0)
-				val += sin(kt * kick_freq * TAU) * 0.30 * kick_env
+		# === DEEP SUB KICK on 1 and 3 ===
+		if t > beat * 4:  # Drums in after 1 bar
+			var kick_hits = [0.0, beat * 2.0]
+			for kh in kick_hits:
+				var kt = bar_pos - kh
+				if kt >= 0 and kt < 0.35:
+					var kick_env = pow(max(0.0, 1.0 - kt * 5.0), 3.0)
+					var kick_freq = 45.0 + 60.0 * max(0.0, 1.0 - kt * 25.0)
+					var k = sin(kt * kick_freq * TAU) * 0.45 * kick_env
+					left += k
+					right += k
 
-		# === SNARE on beats 2 and 4 ===
-		var snare_hits = [beat, beat * 3.0]
-		for sh in snare_hits:
-			var st = bar_pos - sh
-			if st >= 0 and st < 0.15:
-				var snare_env = pow(max(0.0, 1.0 - st * 14.0), 1.5)
-				# Noise + tone body
-				val += sin(st * 200.0 * TAU) * 0.08 * snare_env
-				val += (fmod(sin(t * 7919.0) * 43758.5453, 2.0) - 1.0) * 0.12 * snare_env
+		# === SOFT SNARE on 2 and 4 ===
+		if t > beat * 8:  # Snares in after 2 bars
+			var snare_hits = [beat, beat * 3.0]
+			for sh in snare_hits:
+				var st = bar_pos - sh
+				if st >= 0 and st < 0.20:
+					var snare_env = pow(max(0.0, 1.0 - st * 9.0), 1.8)
+					var s_tone = sin(st * 220.0 * TAU) * 0.08
+					var s_noise = (fmod(sin(t * 7919.0) * 43758.5453, 2.0) - 1.0) * 0.10
+					var s = (s_tone + s_noise) * snare_env
+					left += s * 1.05
+					right += s * 0.95
 
-		# === HI-HAT — eighth notes with velocity variation ===
-		var hh_period = beat * 0.5
-		var hh_pos_local = fmod(t, hh_period)
-		var hh_idx = int(t / hh_period)
-		if hh_pos_local < 0.04:
-			var hh_vol = 0.04 if hh_idx % 2 == 0 else 0.025
-			var hh_env = max(0.0, 1.0 - hh_pos_local * 50.0)
-			val += (fmod(sin(t * 13417.0) * 23421.6, 2.0) - 1.0) * hh_vol * hh_env
+		# === Soft hi-hats — 16th notes, panned ===
+		if t > beat * 6:
+			var hh_period = beat * 0.25
+			var hh_pos_local = fmod(t, hh_period)
+			var hh_idx = int(t / hh_period)
+			if hh_pos_local < 0.025:
+				var hh_vol = 0.025 if hh_idx % 4 == 0 else 0.014
+				var hh_env = max(0.0, 1.0 - hh_pos_local * 80.0)
+				var h = (fmod(sin(t * 13417.0) * 23421.6, 2.0) - 1.0) * hh_vol * hh_env
+				if hh_idx % 2 == 0:
+					left += h * 1.2
+					right += h * 0.6
+				else:
+					left += h * 0.6
+					right += h * 1.2
 
-		# === DEEP BASS LINE (comes in after 2 beats) ===
+		# === SUB BASS — half notes following chord roots ===
 		if t > beat * 2:
-			var bass_idx = (beat_num / 2) % bass_pattern.size()
-			var bass_freq = bass_pattern[bass_idx]
-			var bass_env = 0.8 + 0.2 * max(0.0, 1.0 - beat_pos * 2.0)
-			# Sub bass (sine) + harmonics for warmth
-			val += sin(t * bass_freq * TAU) * 0.22 * bass_env
-			val += sin(t * bass_freq * 2.0 * TAU) * 0.08 * bass_env
-			val += sin(t * bass_freq * 3.0 * TAU) * 0.03 * bass_env
+			var bass_idx = bar_num % bass_notes.size()
+			var bass_freq = bass_notes[bass_idx]
+			var bass_env = 0.85 + 0.15 * max(0.0, 1.0 - (beat_pos / beat) * 0.5)
+			# Sine sub + saw harmonic for warmth
+			var b = sin(t * bass_freq * TAU) * 0.28 * bass_env
+			b += sin(t * bass_freq * 2.0 * TAU) * 0.06 * bass_env
+			# Mild slow detune
+			b += sin(t * bass_freq * 1.005 * TAU) * 0.04 * bass_env
+			left += b
+			right += b
 
-		# === SMOOTH SYNTH PAD (comes in after 4 seconds) ===
-		if t > 4.0:
-			var chord_idx = (bar_num) % chord_sets.size()
-			var chord = chord_sets[chord_idx]
-			var pad_vol = clamp((t - 4.0) / 3.0, 0.0, 1.0) * 0.035
-			for note in chord:
-				# Detuned saw-like tone for richness
-				val += sin(t * note * TAU) * pad_vol
-				val += sin(t * note * 1.003 * TAU) * pad_vol * 0.7
-				val += sin(t * note * 2.0 * TAU) * pad_vol * 0.3
+		# === SUSTAINED CHORD PAD — fades in across full song ===
+		var pad_fade = clamp(t / 4.0, 0.0, 1.0) * 0.10
+		var chord_idx = bar_num % chord_sets.size()
+		var chord = chord_sets[chord_idx]
+		# Stereo widening — odd chord notes left, even right
+		for ci in range(chord.size()):
+			var note = chord[ci]
+			# Triangle-like wave (sine + harmonic)
+			var p1 = sin(t * note * TAU) * pad_fade
+			var p2 = sin(t * note * 1.005 * TAU) * pad_fade * 0.7
+			var p3 = sin(t * note * 2.0 * TAU) * pad_fade * 0.25
+			# Slow tremolo
+			var trem = 0.85 + 0.15 * sin(t * 4.0 * TAU)
+			var pad_v = (p1 + p2 + p3) * trem
+			if ci % 2 == 0:
+				left += pad_v * 1.1
+				right += pad_v * 0.9
+			else:
+				left += pad_v * 0.9
+				right += pad_v * 1.1
 
-		# === MELODY SYNTH (comes in after 6 seconds) ===
-		if t > 6.0:
-			var mel_t = t - 6.0
-			var mel_beat_num = int(mel_t / beat)
-			var mel_beat_pos = fmod(mel_t, beat)
-			var mel_idx = mel_beat_num % melody_notes.size()
-			var mel_freq = melody_notes[mel_idx]
-			if mel_freq > 0:
-				# Smooth envelope with sustain
-				var mel_env = min(mel_beat_pos * 20.0, 1.0) * max(0.0, 1.0 - mel_beat_pos / beat * 0.6) * 0.6
-				var mel_fade_in = clamp((t - 6.0) / 2.0, 0.0, 1.0)
-				# Square-ish wave for that classic synth sound
-				val += sin(t * mel_freq * TAU) * 0.07 * mel_env * mel_fade_in
-				val += sin(t * mel_freq * 2.0 * TAU) * 0.025 * mel_env * mel_fade_in
-				# Slight vibrato
-				val += sin((t + sin(t * 5.0) * 0.002) * mel_freq * TAU) * 0.02 * mel_env * mel_fade_in
-
-		# === RIDE CYMBAL pattern (after 8 seconds) ===
+		# === LEAD SYNTH MELODY — sustained notes (saw + sine) ===
 		if t > 8.0:
-			var ride_period = beat
-			var ride_pos_local = fmod(t, ride_period)
-			if ride_pos_local < 0.06:
-				var ride_env = max(0.0, 1.0 - ride_pos_local * 25.0)
-				val += (fmod(sin(t * 8761.0) * 51234.7, 2.0) - 1.0) * 0.015 * ride_env
+			var mel_t = t - 8.0
+			var mel_beat = int(mel_t / beat)
+			var mel_pos = fmod(mel_t, beat)
+			var mel_idx = mel_beat % lead_notes.size()
+			var mel_freq = lead_notes[mel_idx]
+			if mel_freq > 0.0:
+				# Smooth ADSR envelope (quick attack, long sustain, soft release)
+				var attack = clamp(mel_pos * 25.0, 0.0, 1.0)
+				var sustain = max(0.6, 1.0 - mel_pos * 0.3)
+				var mel_env = attack * sustain * 0.10
+				var fade_in = clamp((t - 8.0) / 3.0, 0.0, 1.0)
+				# Sine + slight detune (saw-like character without harshness)
+				var lead = sin(t * mel_freq * TAU) * mel_env * fade_in
+				lead += sin(t * mel_freq * 1.004 * TAU) * mel_env * 0.7 * fade_in
+				lead += sin(t * mel_freq * 0.5 * TAU) * mel_env * 0.3 * fade_in  # sub octave
+				# Subtle vibrato
+				var vib = sin(t * 5.5 * TAU) * 0.003
+				lead += sin(t * mel_freq * (1.0 + vib) * TAU) * mel_env * 0.4 * fade_in
+				# Pan lead slightly right then left across the song
+				var pan = 0.5 + 0.4 * sin(t * 0.15)
+				left += lead * (1.0 - pan) * 1.4
+				right += lead * pan * 1.4
 
-		# === Master volume — smooth fade in and fade out ===
-		var master = clamp(t / 1.5, 0.0, 1.0) * 0.8
-		if t > duration - 3.0:
-			master *= (duration - t) / 3.0
-		val *= master
+		# === Master fade-in / fade-out ===
+		var master = clamp(t / 2.0, 0.0, 1.0) * 0.85
+		if t > duration - 4.0:
+			master *= max(0.0, (duration - t) / 4.0)
+		left *= master
+		right *= master
 
-		var sample_val_m = int(clamp(val, -1.0, 1.0) * 32767)
-		data[i * 2] = sample_val_m & 0xFF
-		data[i * 2 + 1] = (sample_val_m >> 8) & 0xFF
+		var lv = int(clamp(left, -1.0, 1.0) * 32767)
+		var rv = int(clamp(right, -1.0, 1.0) * 32767)
+		var off = i * 4
+		data[off] = lv & 0xFF
+		data[off + 1] = (lv >> 8) & 0xFF
+		data[off + 2] = rv & 0xFF
+		data[off + 3] = (rv >> 8) & 0xFF
 	stream.data = data
 	return stream
 

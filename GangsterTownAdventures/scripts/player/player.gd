@@ -25,10 +25,10 @@ var footstep_timer = 0.0
 var vehicle_entry_cooldown = 0.0  # Prevents instant exit after entering
 var intro_mode: bool = false  # Disables all input during cinematic intro
 
-# Weapon system
+# Weapon system — start with FISTS only (must pick up weapons in world)
 enum Weapon { MELEE, PISTOL, RIFLE, SHOTGUN }
-var current_weapon: int = Weapon.PISTOL
-var ammo = { Weapon.PISTOL: 60, Weapon.RIFLE: 120, Weapon.SHOTGUN: 30 }
+var current_weapon: int = Weapon.MELEE
+var ammo = { Weapon.PISTOL: 0, Weapon.RIFLE: 0, Weapon.SHOTGUN: 0 }
 var weapon_damage = { Weapon.PISTOL: 25, Weapon.RIFLE: 40, Weapon.SHOTGUN: 80 }
 var weapon_fire_rate = { Weapon.PISTOL: 0.3, Weapon.RIFLE: 0.1, Weapon.SHOTGUN: 0.7 }
 var fire_cooldown = 0.0

@@ -8,6 +8,13 @@ var save_system: Node
 var world: Node3D
 var intro_music_player: AudioStreamPlayer = null
 
+# Perf overlay (F3)
+var _perf_overlay: CanvasLayer = null
+var _perf_label: Label = null
+var _f3_was_down: bool = false
+var _perf_accum: float = 0.0
+var _perf_visible: bool = false
+
 func _ready():
 	await get_tree().process_frame
 	player = $Player
@@ -55,7 +62,7 @@ func _ready():
 	await get_tree().create_timer(1.0).timeout
 	for hud in get_tree().get_nodes_in_group("hud"):
 		if hud.has_method("update_mission"):
-			hud.update_mission("Press M to start: " + mission_system.story_missions[0]["title"])
+			hud.update_mission(mission_system.story_missions[0]["title"])
 
 var intro_overlay: Control = null
 var intro_camera: Camera3D = null
@@ -98,14 +105,20 @@ func _show_game_intro():
 	intro_overlay.add_child(bottom_bar)
 
 	# --- Camera flyover waypoints (Vice City style: beach → pier → downtown → Hollywood → player) ---
+	# [position, look_at_target, duration, label_text, "Speaker: line"]
 	var waypoints = [
-		# [position, look_at_target, duration, label_text]
-		[Vector3(20, 40, 170), Vector3(0, 0, 155), 3.0, "SANTA MONICA BEACH"],
-		[Vector3(-60, 25, 140), Vector3(-30, 0, 155), 2.5, "VENICE BOARDWALK"],
-		[Vector3(50, 60, 50), Vector3(0, 0, 0), 3.0, "DOWNTOWN LOS SANTOS"],
-		[Vector3(-180, 50, -180), Vector3(-200, 20, -200), 2.5, "HOLLYWOOD HILLS"],
-		[Vector3(-130, 35, -130), Vector3(-150, 15, -150), 2.0, "GRIFFITH OBSERVATORY"],
-		[Vector3(30, 15, 30), Vector3(22, 1, 22), 2.5, ""],
+		[Vector3(20, 40, 170), Vector3(0, 0, 155), 3.0, "SANTA MONICA BEACH",
+			"NARRATOR:  Los Santos.  A city built on dreams... and bullets."],
+		[Vector3(-60, 25, 140), Vector3(-30, 0, 155), 2.5, "VENICE BOARDWALK",
+			"TOMMY:  Twenty years I waited to come back.  This town owes me."],
+		[Vector3(50, 60, 50), Vector3(0, 0, 0), 3.0, "DOWNTOWN LOS SANTOS",
+			"DON MARCO:  The streets are run by gangs now, Tommy.  Pick your side."],
+		[Vector3(-180, 50, -180), Vector3(-200, 20, -200), 2.5, "HOLLYWOOD HILLS",
+			"TOMMY:  I don't pick sides, Marco.  I take what's mine."],
+		[Vector3(-130, 35, -130), Vector3(-150, 15, -150), 2.0, "GRIFFITH OBSERVATORY",
+			"NARRATOR:  Welcome to the rise of a new kingpin..."],
+		[Vector3(30, 15, 30), Vector3(22, 1, 22), 2.5, "",
+			"TOMMY:  Time to make some noise."],
 	]
 
 	# Location label (bottom area, above letterbox)
@@ -117,6 +130,21 @@ func _show_game_intro():
 	loc_label.offset_top = -120
 	loc_label.size = Vector2(400, 40)
 	intro_overlay.add_child(loc_label)
+
+	# Dialogue caption (above bottom letterbox bar)
+	var dlg_label = Label.new()
+	dlg_label.add_theme_font_size_override("font_size", 22)
+	dlg_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.85, 0.0))
+	dlg_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	dlg_label.add_theme_constant_override("outline_size", 6)
+	dlg_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dlg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	dlg_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	dlg_label.offset_top = -75
+	dlg_label.offset_left = 100
+	dlg_label.offset_right = -100
+	dlg_label.size = Vector2(0, 50)
+	intro_overlay.add_child(dlg_label)
 
 	# Start the camera at first waypoint
 	intro_camera.global_position = waypoints[0][0]
@@ -130,6 +158,7 @@ func _show_game_intro():
 		var look = wp[1]
 		var dur = wp[2]
 		var lbl = wp[3]
+		var dlg = wp[4] if wp.size() > 4 else ""
 
 		# Show location label
 		if lbl != "":
@@ -144,6 +173,21 @@ func _show_game_intro():
 				fade_in.tween_method(func(a):
 					loc_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7, a))
 				, 1.0, 0.0, 0.4)
+			)
+
+		# Show dialogue caption for this waypoint
+		if dlg != "":
+			tween.tween_callback(func():
+				dlg_label.text = dlg
+				dlg_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.85, 0.0))
+				var dfade = create_tween()
+				dfade.tween_method(func(a):
+					dlg_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.85, a))
+				, 0.0, 1.0, 0.35)
+				dfade.tween_interval(max(0.3, dur - 0.9))
+				dfade.tween_method(func(a):
+					dlg_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.85, a))
+				, 1.0, 0.0, 0.45)
 			)
 
 		# Smooth camera move with look-at tracking
@@ -248,6 +292,10 @@ func _end_intro():
 				if cam:
 					cam.current = true
 	_fade_out_intro_music()
+	# Auto-start the first story mission so the player isn't told to "press M"
+	if mission_system and mission_system.has_method("start_mission"):
+		await get_tree().create_timer(1.5).timeout
+		mission_system.start_mission(0)
 
 func _play_intro_music():
 	intro_music_player = AudioStreamPlayer.new()
@@ -279,7 +327,13 @@ func _process(delta):
 	if Input.is_action_just_pressed("load"):
 		save_system.load_game()
 		print("Loaded!")
-	
+
+	# F3 toggles perf overlay
+	if Input.is_key_pressed(KEY_F3) and not _f3_was_down:
+		_toggle_perf_overlay()
+	_f3_was_down = Input.is_key_pressed(KEY_F3)
+	_update_perf_overlay()
+
 	# Save point proximity check
 	_check_save_point_proximity()
 	if Globals.near_save_point and Input.is_action_just_pressed("quick_save"):
@@ -328,17 +382,24 @@ func spawn_npcs():
 		push_error("[SPAWN] Failed to load pedestrian.tscn!")
 		return
 	var sidewalk_spots = []
-	for i in range(-7, 8):
-		for j in range(-7, 8):
+	for i in range(-11, 12):
+		for j in range(-11, 12):
 			sidewalk_spots.append(Vector3(i * 50 + 6, 0.5, j * 50 + 6))
 			sidewalk_spots.append(Vector3(i * 50 - 6, 0.5, j * 50 - 6))
 	sidewalk_spots.shuffle()
-	var count = mini(40, sidewalk_spots.size())
-	for i in range(count):
+	var count = mini(140, sidewalk_spots.size())
+	var spawned_n = 0
+	for i in range(sidewalk_spots.size()):
+		if spawned_n >= count:
+			break
+		var pos = sidewalk_spots[i]
+		if world and world.has_method("_is_zone_free") and not world._is_zone_free(pos.x, pos.z, 2, 2):
+			continue
 		var npc = scene.instantiate()
 		add_child(npc)
-		npc.global_position = sidewalk_spots[i]
-	print("[SPAWN] Spawned %d pedestrians" % count)
+		npc.global_position = pos
+		spawned_n += 1
+	print("[SPAWN] Spawned %d pedestrians" % spawned_n)
 
 func spawn_police():
 	print("[SPAWN] Starting police spawn...")
@@ -346,13 +407,19 @@ func spawn_police():
 	if not scene:
 		push_error("[SPAWN] Failed to load police.tscn!")
 		return
-	for i in range(10):
+	var placed_p = 0
+	var tries_p = 0
+	while placed_p < 30 and tries_p < 400:
+		tries_p += 1
+		var x = randf_range(20, 500) * (1 if randi() % 2 == 0 else -1)
+		var z = randf_range(20, 500) * (1 if randi() % 2 == 0 else -1)
+		if world and world.has_method("_is_zone_free") and not world._is_zone_free(x, z, 2, 2):
+			continue
 		var cop = scene.instantiate()
 		add_child(cop)
-		var x = randf_range(20, 200) * (1 if randi() % 2 == 0 else -1)
-		var z = randf_range(20, 200) * (1 if randi() % 2 == 0 else -1)
 		cop.global_position = Vector3(x, 0.5, z)
-	print("[SPAWN] Spawned 100 police")
+		placed_p += 1
+	print("[SPAWN] Spawned %d police" % placed_p)
 
 func spawn_gangsters():
 	print("[SPAWN] Starting gangster spawn...")
@@ -360,14 +427,20 @@ func spawn_gangsters():
 	if not scene:
 		push_error("[SPAWN] Failed to load gangster.tscn!")
 		return
-	for i in range(15):
+	var placed_g = 0
+	var tries_g = 0
+	while placed_g < 40 and tries_g < 500:
+		tries_g += 1
+		var x = randf_range(30, 500) * (1 if randi() % 2 == 0 else -1)
+		var z = randf_range(30, 500) * (1 if randi() % 2 == 0 else -1)
+		if world and world.has_method("_is_zone_free") and not world._is_zone_free(x, z, 2, 2):
+			continue
 		var g = scene.instantiate()
 		add_child(g)
-		var x = randf_range(30, 200) * (1 if randi() % 2 == 0 else -1)
-		var z = randf_range(30, 200) * (1 if randi() % 2 == 0 else -1)
 		g.global_position = Vector3(x, 0.5, z)
 		g.connect("tree_exited", _on_enemy_killed)
-	print("[SPAWN] Spawned 15 gangsters")
+		placed_g += 1
+	print("[SPAWN] Spawned %d gangsters" % placed_g)
 
 func spawn_traffic():
 	print("[SPAWN] Starting traffic spawn...")
@@ -376,15 +449,15 @@ func spawn_traffic():
 		push_error("[SPAWN] Failed to load traffic.tscn!")
 		return
 	var road_starts = []
-	for road_x_idx in range(-6, 7, 2):
+	for road_x_idx in range(-10, 11, 2):
 		var road_x = road_x_idx * 50
 		var lane_offset = 2.0 if randi() % 2 == 0 else -2.0
-		var start_z = randf_range(-250, 250)
+		var start_z = randf_range(-500, 500)
 		road_starts.append({"pos": Vector3(road_x + lane_offset, 0.2, start_z), "axis": "ns"})
-	for road_z_idx in range(-6, 7, 2):
+	for road_z_idx in range(-10, 11, 2):
 		var road_z = road_z_idx * 50
 		var lane_offset = 2.0 if randi() % 2 == 0 else -2.0
-		var start_x = randf_range(-250, 250)
+		var start_x = randf_range(-500, 500)
 		road_starts.append({"pos": Vector3(start_x, 0.2, road_z + lane_offset), "axis": "ew"})
 	for rd in road_starts:
 		var car = scene.instantiate()
@@ -400,20 +473,20 @@ func spawn_vehicles():
 		push_error("[SPAWN] Failed to load vehicle.tscn!")
 		return
 	var positions = []
-	for road_idx in range(-7, 8):
+	for road_idx in range(-11, 12):
 		var road_x = road_idx * 50
-		for offset_z in [-40, -15, 15, 40, 70, -70, 100, -100]:
+		for offset_z in [-40, -15, 15, 40, 70, -70, 100, -100, 150, -150, 220, -220, 320, -320, 450, -450]:
 			if randi() % 3 != 0:
 				var side = 4.8 if randi() % 2 == 0 else -4.8
 				positions.append(Vector3(road_x + side, 0.2, offset_z))
-	for road_idx in range(-7, 8):
+	for road_idx in range(-11, 12):
 		var road_z = road_idx * 50
-		for offset_x in [-40, -15, 15, 40, 70, -70, 100, -100]:
+		for offset_x in [-40, -15, 15, 40, 70, -70, 100, -100, 150, -150, 220, -220, 320, -320, 450, -450]:
 			if randi() % 3 != 0:
 				var side = 4.8 if randi() % 2 == 0 else -4.8
 				positions.append(Vector3(offset_x, 0.2, road_z + side))
 	positions.shuffle()
-	var count = mini(30, positions.size())
+	var count = mini(120, positions.size())
 	var spawned = 0
 	var placed_zones: Array = []  # Simple overlap check for vehicles
 	for i in range(positions.size()):
@@ -476,17 +549,17 @@ func spawn_animals():
 	if not scene:
 		push_error("[SPAWN] Failed to load animal.tscn!")
 		return
-	for i in range(8):
+	for i in range(22):
 		var dog = scene.instantiate()
 		dog.animal_type = "dog"
 		add_child(dog)
-		dog.global_position = Vector3(randf_range(-150, 150), 0.5, randf_range(-150, 150))
-	for i in range(6):
+		dog.global_position = Vector3(randf_range(-400, 400), 0.5, randf_range(-400, 400))
+	for i in range(16):
 		var cat = scene.instantiate()
 		cat.animal_type = "cat"
 		add_child(cat)
-		cat.global_position = Vector3(randf_range(-150, 150), 0.5, randf_range(-150, 150))
-	print("[SPAWN] Spawned 8 dogs + 6 cats")
+		cat.global_position = Vector3(randf_range(-400, 400), 0.5, randf_range(-400, 400))
+	print("[SPAWN] Spawned 22 dogs + 16 cats")
 
 func spawn_weapon_pickups():
 	print("[SPAWN] Starting weapon pickup spawn...")
@@ -519,3 +592,44 @@ func spawn_weapon_pickups():
 func _on_enemy_killed():
 	if mission_system and mission_system.is_mission_active:
 		mission_system.on_kill()
+
+# ─────────────── F3 PERF OVERLAY ───────────────
+func _toggle_perf_overlay():
+	if _perf_overlay == null:
+		_perf_overlay = CanvasLayer.new()
+		_perf_overlay.layer = 100
+		add_child(_perf_overlay)
+		var bg = ColorRect.new()
+		bg.color = Color(0, 0, 0, 0.55)
+		bg.position = Vector2(8, 8)
+		bg.size = Vector2(280, 180)
+		_perf_overlay.add_child(bg)
+		_perf_label = Label.new()
+		_perf_label.position = Vector2(16, 14)
+		_perf_label.size = Vector2(270, 170)
+		_perf_label.add_theme_font_size_override("font_size", 14)
+		_perf_label.add_theme_color_override("font_color", Color(0.85, 1.0, 0.8))
+		_perf_overlay.add_child(_perf_label)
+	_perf_visible = not _perf_visible
+	_perf_overlay.visible = _perf_visible
+
+func _update_perf_overlay():
+	if not _perf_visible or _perf_label == null:
+		return
+	_perf_accum += get_process_delta_time()
+	if _perf_accum < 0.25:
+		return
+	_perf_accum = 0.0
+	var fps = Engine.get_frames_per_second()
+	var draw_calls = Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+	var prim = Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)
+	var objs = Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)
+	var nodes_n = Performance.get_monitor(Performance.OBJECT_NODE_COUNT)
+	var mem_mb = Performance.get_monitor(Performance.MEMORY_STATIC) / (1024.0 * 1024.0)
+	var phys_step = Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+	var process_step = Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+	var npc_count = get_tree().get_nodes_in_group("npc").size()
+	var veh_count = get_tree().get_nodes_in_group("vehicle").size()
+	_perf_label.text = "PERF (F3)\nFPS: %d\nDraw calls: %d\nPrimitives: %d\nObjects: %d\nNodes: %d\nMemory: %.1f MB\nProcess: %.2f ms\nPhysics: %.2f ms\nNPCs: %d  Vehicles: %d" % [
+		fps, draw_calls, prim, objs, nodes_n, mem_mb, process_step, phys_step, npc_count, veh_count
+	]

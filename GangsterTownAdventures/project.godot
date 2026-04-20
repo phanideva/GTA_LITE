@@ -31,6 +31,7 @@ SFX="*res://scripts/systems/sfx_manager.gd"
 VFX="*res://scripts/systems/vfx_manager.gd"
 Cutscene="*res://scripts/systems/cutscene_system.gd"
 Radio="*res://scripts/systems/radio_system.gd"
+AssetLoader="*res://scripts/utils/asset_loader.gd"
 
 [display]
 

@@ -238,8 +238,8 @@ func player_entered(p: Node3D):
 	p.is_in_vehicle = true
 	if p.model_root:
 		p.model_root.visible = false
-	# Engine sound (if not bicycle)
-	if not is_bicycle:
+	# Engine sound (if not bicycle) — guard against duplicate
+	if not is_bicycle and get_node_or_null("EngineLoop") == null:
 		var eng = AudioStreamPlayer.new()
 		eng.name = "EngineLoop"
 		eng.bus = "Master"

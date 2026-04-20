@@ -38,6 +38,7 @@ func _ready():
 	create_streetlights()
 	create_sidewalks()
 	create_save_point_markers()
+	create_neon_signs()
 	setup_lighting()
 	setup_sky()
 	print("[WORLD] Environment generation complete!")
@@ -45,13 +46,13 @@ func _ready():
 func _register_road_zones():
 	# Register all road strips as occupied zones so buildings/objects don't overlap them
 	# 18m zone = 8m road + 5m sidewalk each side — prevents any clipping
-	for i in range(-8, 9):
+	for i in range(-12, 13):
 		var road_pos = i * 50.0
 		var zone_w = 18.0 if i != 0 else 22.0  # Main boulevard wider
-		# North-south roads
-		_register_zone(road_pos, 0, zone_w, 900.0)
+		# North-south roads (extended to 1300m to cover bigger map)
+		_register_zone(road_pos, 0, zone_w, 1300.0)
 		# East-west roads
-		_register_zone(0, road_pos, 900.0, zone_w)
+		_register_zone(0, road_pos, 1300.0, zone_w)
 
 func _process(delta):
 	time_of_day += delta * day_speed
@@ -75,7 +76,7 @@ func create_terrain():
 
 	var gm = MeshInstance3D.new()
 	var plane = PlaneMesh.new()
-	plane.size = Vector2(1000, 1000)
+	plane.size = Vector2(1500, 1500)
 	gm.mesh = plane
 	var grass_mat = StandardMaterial3D.new()
 	grass_mat.albedo_color = Color(0.18, 0.52, 0.22)
@@ -92,28 +93,28 @@ func create_terrain():
 # ═══════════════════════ ROADS ═══════════════════════
 func create_roads():
 	# Main streets (4-lane boulevard — realistic 12m width)
-	_add_road(Vector3(0, 0.02, 0), Vector3(12, 0.15, 1200))    # Main N-S boulevard
-	_add_road(Vector3(0, 0.02, 0), Vector3(1200, 0.15, 12))    # Main E-W boulevard
+	_add_road(Vector3(0, 0.02, 0), Vector3(12, 0.15, 1800))    # Main N-S boulevard
+	_add_road(Vector3(0, 0.02, 0), Vector3(1800, 0.15, 12))    # Main E-W boulevard
 
-	# City grid — from -8 to +8 blocks (50m spacing, realistic block size)
-	for i in range(-8, 9):
+	# City grid — from -12 to +12 blocks (50m spacing, realistic block size)
+	for i in range(-12, 13):
 		if i == 0: continue
-		_add_road(Vector3(i * 50, 0.02, 0), Vector3(8.0, 0.12, 1200))   # 2-lane roads (8m)
-		_add_road(Vector3(0, 0.02, i * 50), Vector3(1200, 0.12, 8.0))
+		_add_road(Vector3(i * 50, 0.02, 0), Vector3(8.0, 0.12, 1800))   # 2-lane roads (8m)
+		_add_road(Vector3(0, 0.02, i * 50), Vector3(1800, 0.12, 8.0))
 
 	# Road center lines — yellow dashed on every road
-	for i in range(-8, 9, 2):
-		for j in range(-12, 13):
+	for i in range(-12, 13, 2):
+		for j in range(-18, 19):
 			_add_road_marking(Vector3(i * 50, 0.16, j * 20), true)
 			_add_road_marking(Vector3(j * 20, 0.16, i * 50), false)
 
 func create_road_curbs():
 	var curb_mat = _make_mat(Color(0.6, 0.6, 0.58), 0.85)
-	for i in range(-8, 9):
+	for i in range(-12, 13):
 		for side in [-1, 1]:
 			var curb = MeshInstance3D.new()
 			var cm = BoxMesh.new()
-			cm.size = Vector3(0.25, 0.15, 1200)
+			cm.size = Vector3(0.25, 0.15, 1800)
 			cm.material = curb_mat
 			curb.mesh = cm
 			curb.position = Vector3(i * 50 + side * 4.5, 0.12, 0)
@@ -121,7 +122,7 @@ func create_road_curbs():
 		for side in [-1, 1]:
 			var curb = MeshInstance3D.new()
 			var cm = BoxMesh.new()
-			cm.size = Vector3(1200, 0.15, 0.25)
+			cm.size = Vector3(1800, 0.15, 0.25)
 			cm.material = curb_mat
 			curb.mesh = cm
 			curb.position = Vector3(0, 0.12, i * 50 + side * 4.5)
@@ -274,8 +275,8 @@ func create_buildings():
 		Color(1.0, 1.0, 0.2),   # Yellow neon
 	]
 	
-	for bx in range(-7, 8):
-		for bz in range(-7, 8):
+	for bx in range(-11, 12):
+		for bz in range(-11, 12):
 			# Skip the center park area and shop blocks
 			if abs(bx) <= 1 and abs(bz) <= 1:
 				continue
@@ -288,9 +289,9 @@ func create_buildings():
 			
 			var block_center = Vector3((bx + 0.5) * 50, 0, (bz + 0.5) * 50)
 			var dist_from_center = Vector2(block_center.x, block_center.z).length()
-			# LA skyline: tall downtown, medium midtown, low suburbs
-			var max_height = 55.0 if dist_from_center < 60 else (35.0 if dist_from_center < 120 else (20.0 if dist_from_center < 180 else 10.0))
-			var min_height = 18.0 if dist_from_center < 60 else (8.0 if dist_from_center < 120 else (4.0 if dist_from_center < 180 else 3.0))
+			# LA skyline: tall downtown, medium midtown, low suburbs (now extends to ±550m)
+			var max_height = 55.0 if dist_from_center < 60 else (35.0 if dist_from_center < 120 else (20.0 if dist_from_center < 180 else (12.0 if dist_from_center < 350 else 8.0)))
+			var min_height = 18.0 if dist_from_center < 60 else (8.0 if dist_from_center < 120 else (4.0 if dist_from_center < 180 else (3.0 if dist_from_center < 350 else 3.0)))
 			
 			var height = randf_range(min_height, max_height)
 			var width = randf_range(14, 26)
@@ -731,19 +732,32 @@ func _add_shop(shop_name: String, pos: Vector3, wall_color: Color, sign_color: C
 
 # ═══════════════════════ TREES ═══════════════════════
 func create_trees():
-	for i in range(80):
-		var x = randf_range(-250, 250)
-		var z = randf_range(-250, 250)
+	for i in range(180):
+		var x = randf_range(-550, 550)
+		var z = randf_range(-550, 550)
 		if abs(fmod(x, 50.0)) < 6.0 or abs(fmod(z, 50.0)) < 6.0:
 			continue
 		if abs(x) < 15 and abs(z) < 15:
 			continue
-		# Skip beach area
+		# Skip beach area — palms there
 		if z > 115:
 			continue
-		_add_tree(Vector3(x, 0, z))
+		# Mix in some palms inland too for Vice City look
+		if randf() < 0.25:
+			_add_palm_tree(Vector3(x, 0, z))
+		else:
+			_add_tree(Vector3(x, 0, z))
 
 func _add_tree(pos: Vector3):
+	# Try GLB first (Kenney Nature Kit); fall back to procedural
+	var glb = AssetLoader.load_or_null("res://assets/models/nature/tree_oak.glb")
+	if glb:
+		var inst = glb.instantiate()
+		inst.position = pos
+		inst.scale = Vector3.ONE * randf_range(1.4, 2.2)
+		inst.rotation.y = randf_range(0, TAU)
+		add_child(inst)
+		return
 	var tree = Node3D.new()
 	tree.position = pos
 
@@ -1231,34 +1245,76 @@ func create_ocean_and_beach():
 	_add_lifeguard_tower(Vector3(-60, 0, 140))
 
 func _add_palm_tree(pos: Vector3):
+	# Try GLB first (Kenney Nature Kit etc.); fall back to procedural
+	var glb = AssetLoader.load_or_null("res://assets/models/nature/palm_tree.glb")
+	if glb:
+		var inst = glb.instantiate()
+		inst.position = pos
+		inst.scale = Vector3.ONE * randf_range(1.6, 2.4)
+		inst.rotation.y = randf_range(0, TAU)
+		add_child(inst)
+		return
 	var tree = Node3D.new()
 	tree.position = pos
-	var trunk_h = randf_range(6, 10)
-	var trunk = MeshInstance3D.new()
-	var tm = CylinderMesh.new()
-	tm.top_radius = 0.12
-	tm.bottom_radius = 0.25
-	tm.height = trunk_h
-	tm.material = _make_mat(Color(0.45, 0.32, 0.18))
-	trunk.mesh = tm
-	trunk.position.y = trunk_h / 2.0
-	# Slight lean
-	trunk.rotation.x = randf_range(-0.1, 0.1)
-	trunk.rotation.z = randf_range(-0.1, 0.1)
-	tree.add_child(trunk)
-	# Palm fronds (flat green cones)
-	for f in range(5):
-		var frond = MeshInstance3D.new()
-		var fm = CylinderMesh.new()
-		fm.top_radius = 0.0
-		fm.bottom_radius = 2.5
-		fm.height = 0.3
-		fm.material = _make_mat(Color(0.12, 0.55, 0.15))
-		frond.mesh = fm
-		frond.position.y = trunk_h + 0.5
-		frond.rotation.x = randf_range(-0.3, 0.3)
-		frond.rotation.z = f * (TAU / 5.0)
-		tree.add_child(frond)
+	var trunk_h = randf_range(7, 12)
+	# Curved trunk made of stacked tapered cylinder segments for an organic Vice City silhouette
+	var segments = 6
+	var curve_dir = Vector3(randf_range(-0.18, 0.18), 0, randf_range(-0.18, 0.18))
+	var accumulated = Vector3.ZERO
+	var prev_y = 0.0
+	for s in range(segments):
+		var seg_h = trunk_h / float(segments)
+		var seg = MeshInstance3D.new()
+		var sm = CylinderMesh.new()
+		var t_top = float(s + 1) / float(segments)
+		var t_bot = float(s) / float(segments)
+		sm.top_radius = lerp(0.28, 0.13, t_top)
+		sm.bottom_radius = lerp(0.28, 0.13, t_bot)
+		sm.height = seg_h
+		sm.material = _make_mat(Color(0.42 + randf() * 0.08, 0.30, 0.18))
+		seg.mesh = sm
+		# Curve outward as we go up
+		var lateral = curve_dir * pow(t_bot, 1.4) * 0.6
+		accumulated = lateral
+		seg.position = Vector3(accumulated.x, prev_y + seg_h * 0.5, accumulated.z)
+		prev_y += seg_h
+		tree.add_child(seg)
+	var top_pos = Vector3(accumulated.x, trunk_h, accumulated.z)
+	# Coconuts cluster at top
+	for c in range(randi_range(2, 5)):
+		var coco = MeshInstance3D.new()
+		var com = SphereMesh.new()
+		com.radius = 0.16
+		com.height = 0.32
+		com.material = _make_mat(Color(0.28, 0.18, 0.10))
+		coco.mesh = com
+		var ang = randf() * TAU
+		coco.position = top_pos + Vector3(cos(ang) * 0.35, -0.15, sin(ang) * 0.35)
+		tree.add_child(coco)
+	# Palm fronds — drooping curved fronds (multi-segment per frond)
+	var frond_count = randi_range(7, 10)
+	for f in range(frond_count):
+		var base_ang = (float(f) / frond_count) * TAU
+		var droop = randf_range(-0.55, -0.25)
+		# Frond is 3 stacked elongated boxes that curve down
+		var segs_per_frond = 3
+		var last_pos = top_pos + Vector3(0, 0.1, 0)
+		var last_dir = Vector3(cos(base_ang), 0.05, sin(base_ang))
+		for fs in range(segs_per_frond):
+			var seg = MeshInstance3D.new()
+			var fmesh = BoxMesh.new()
+			var seg_len = 1.4 - fs * 0.25
+			fmesh.size = Vector3(0.45 - fs * 0.05, 0.04, seg_len)
+			var leaf = Color(0.10 + randf() * 0.06, 0.50 + randf() * 0.15, 0.12 + randf() * 0.05)
+			fmesh.material = _make_mat(leaf)
+			seg.mesh = fmesh
+			last_dir.y += droop * 0.4
+			last_dir = last_dir.normalized()
+			var mid = last_pos + last_dir * (seg_len * 0.5)
+			seg.position = mid
+			seg.look_at(seg.position + last_dir, Vector3.UP)
+			tree.add_child(seg)
+			last_pos = last_pos + last_dir * seg_len
 	add_child(tree)
 
 func _add_lifeguard_tower(pos: Vector3):
@@ -1581,6 +1637,116 @@ func setup_lighting():
 	fill.shadow_enabled = false
 	fill.rotation = Vector3(deg_to_rad(-30), deg_to_rad(120), 0)
 	add_child(fill)
+
+# ═══════════════════ NEON SIGNS (Vice City vibe) ═══════════════════
+func create_neon_signs():
+	# Glowing neon strips and signs scattered around city for that synthwave Vice City feel
+	var neon_palette = [
+		Color(1.0, 0.2, 0.7),    # Hot pink
+		Color(0.2, 0.95, 1.0),   # Cyan
+		Color(1.0, 0.5, 0.0),    # Orange
+		Color(0.6, 0.2, 1.0),    # Purple
+		Color(0.2, 1.0, 0.4),    # Green
+		Color(1.0, 0.95, 0.2),   # Yellow
+	]
+	var sign_words = ["NEON", "BAR", "HOTEL", "CASINO", "DINER", "CLUB", "MOTEL", "PIZZA", "GROOVE", "DISCO", "ROXY", "MALIBU"]
+	var rng = RandomNumberGenerator.new()
+	rng.randomize()
+
+	# Place ~50 neon signs along sidewalks of the city grid
+	var placed = 0
+	var tries = 0
+	while placed < 60 and tries < 400:
+		tries += 1
+		var bx = rng.randi_range(-9, 9)
+		var bz = rng.randi_range(-9, 9)
+		if abs(bx) <= 1 and abs(bz) <= 1:
+			continue
+		if bz > 5:  # Skip ocean
+			continue
+		# Place at building corner near road
+		var corner_x = bx * 50.0 + rng.randf_range(-15.0, 15.0)
+		var corner_z = bz * 50.0 + rng.randf_range(-15.0, 15.0)
+		# Don't overlap road strip
+		if abs(fmod(corner_x + 600.0, 50.0) - 25.0) > 18.0 or abs(fmod(corner_z + 600.0, 50.0) - 25.0) > 18.0:
+			pass
+		var col = neon_palette[rng.randi() % neon_palette.size()]
+		var word = sign_words[rng.randi() % sign_words.size()]
+		_add_neon_sign(Vector3(corner_x, rng.randf_range(4.0, 12.0), corner_z), col, word)
+		placed += 1
+
+	# Also dot some neon trim along main boulevard
+	for i in range(-10, 11, 2):
+		var col = neon_palette[abs(i) % neon_palette.size()]
+		_add_neon_strip(Vector3(7.0, 6.5, i * 50.0), Vector3(0.3, 0.3, 4.0), col)
+		_add_neon_strip(Vector3(-7.0, 6.5, i * 50.0), Vector3(0.3, 0.3, 4.0), col)
+		_add_neon_strip(Vector3(i * 50.0, 6.5, 7.0), Vector3(4.0, 0.3, 0.3), col)
+		_add_neon_strip(Vector3(i * 50.0, 6.5, -7.0), Vector3(4.0, 0.3, 0.3), col)
+
+func _add_neon_strip(pos: Vector3, size: Vector3, color: Color):
+	var strip = MeshInstance3D.new()
+	var sm = BoxMesh.new()
+	sm.size = size
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = 4.0
+	mat.metallic = 0.0
+	mat.roughness = 0.4
+	sm.material = mat
+	strip.mesh = sm
+	strip.position = pos
+	add_child(strip)
+	# Tiny omni light to throw color on nearby surfaces
+	var lt = OmniLight3D.new()
+	lt.light_color = color
+	lt.light_energy = 0.6
+	lt.omni_range = 6.0
+	lt.position = pos
+	add_child(lt)
+
+func _add_neon_sign(pos: Vector3, color: Color, word: String):
+	# Backplate
+	var back = MeshInstance3D.new()
+	var bm = BoxMesh.new()
+	bm.size = Vector3(3.2, 1.4, 0.18)
+	bm.material = _make_mat(Color(0.1, 0.08, 0.10), 0.85)
+	back.mesh = bm
+	back.position = pos
+	add_child(back)
+	# Glowing letters strip
+	var letters = MeshInstance3D.new()
+	var lm = BoxMesh.new()
+	lm.size = Vector3(2.8, 0.9, 0.05)
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = 6.0
+	lm.material = mat
+	letters.mesh = lm
+	letters.position = pos + Vector3(0, 0, 0.12)
+	add_child(letters)
+	# Word label (3D text would be ideal but use Label3D for simplicity)
+	var label = Label3D.new()
+	label.text = word
+	label.font_size = 64
+	label.modulate = color
+	label.outline_size = 4
+	label.outline_modulate = Color.BLACK
+	label.position = pos + Vector3(0, 0, 0.16)
+	label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	label.no_depth_test = false
+	label.pixel_size = 0.012
+	add_child(label)
+	# Neon spill light
+	var lt = OmniLight3D.new()
+	lt.light_color = color
+	lt.light_energy = 1.4
+	lt.omni_range = 12.0
+	lt.position = pos + Vector3(0, 0, 1.0)
+	add_child(lt)
 
 func setup_sky():
 	var we = WorldEnvironment.new()

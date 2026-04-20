@@ -285,7 +285,7 @@ func _process(_delta):
 			var dist = player.global_position.distance_to(m["marker"])
 			mission_label.text += "  [%dm]" % int(dist)
 	else:
-		mission_label.text = "Press M for next mission"
+		mission_label.text = ""  # No on-screen hint; missions auto-trigger via story flow
 		mission_desc_label.text = ""
 		mission_desc_label.visible = false
 		mission_timer_label.visible = false
