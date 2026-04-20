@@ -11,6 +11,7 @@ var current_speed = 0.0
 var is_player_driving = false
 var player: Node3D = null
 var health = 100
+var entry_cooldown := 0.0
 
 func _ready():
 	add_to_group("vehicle")
@@ -191,6 +192,8 @@ func _build_bicycle():
 	add_child(col)
 
 func _physics_process(delta):
+	if entry_cooldown > 0:
+		entry_cooldown -= delta
 	if is_player_driving and player:
 		handle_driving(delta)
 
@@ -224,12 +227,13 @@ func handle_driving(delta):
 	if eng:
 		eng.pitch_scale = 0.8 + abs(current_speed) / max_speed * 1.0
 
-	if Input.is_action_just_pressed("interact"):
+	if Input.is_action_just_pressed("interact") and entry_cooldown <= 0:
 		exit_vehicle()
 
 func player_entered(p: Node3D):
 	player = p
 	is_player_driving = true
+	entry_cooldown = 0.5  # Prevent instant exit
 	p.global_position = global_position + Vector3(0, 1.2, 0)
 	p.is_in_vehicle = true
 	if p.model_root:

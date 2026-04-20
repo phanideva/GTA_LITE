@@ -55,6 +55,11 @@ func _ready():
 	collision_layer = 16
 	collision_mask = 1 | 4 | 8  # World, NPCs, Vehicles
 	_build_player_model()
+	# Ensure player model is visible from the start
+	if model_root:
+		model_root.visible = true
+	if char_model:
+		char_model.visible = true
 	# Reparent camera pivot to scene root so it doesn't inherit player rotation
 	await get_tree().process_frame
 	var pivot = camera_pivot
@@ -63,6 +68,19 @@ func _ready():
 		remove_child(pivot)
 		parent.add_child(pivot)
 		pivot.global_position = global_position + Vector3(0, 1.6, 0)
+
+## Call this to restore player visibility and camera after intro/cutscene
+func activate_player_camera():
+	visible = true
+	if model_root:
+		model_root.visible = true
+	if char_model:
+		char_model.visible = true
+	intro_mode = false
+	if camera_pivot:
+		var cam = camera_pivot.get_node_or_null("SpringArm3D/Camera3D")
+		if cam:
+			cam.current = true
 
 func _build_player_model():
 	model_root = Node3D.new()

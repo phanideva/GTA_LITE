@@ -490,3 +490,9 @@ func show_wasted():
 func hide_wasted():
 	death_overlay.visible = false
 	death_label.visible = false
+
+func show_vehicle_prompt(show: bool):
+	if interact_label:
+		interact_label.visible = show
+		if show:
+			interact_label.text = "Press [E] to enter vehicle"

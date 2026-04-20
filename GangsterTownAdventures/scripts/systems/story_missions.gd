@@ -538,3 +538,10 @@ func get_story_progress_text() -> String:
 		return "STORY COMPLETE — Chapter 5/5"
 	var chapter = story_missions[story_progress].get("chapter", 1)
 	return "Chapter %d/5 — Mission %d/%d" % [chapter, story_progress + 1, story_missions.size()]
+
+func get_time_remaining() -> float:
+	if not is_mission_active:
+		return 0.0
+	if current_mission.get("type") == "survive":
+		return max(0.0, current_mission.get("target_count", 60) - survive_timer)
+	return max(0.0, mission_timer)

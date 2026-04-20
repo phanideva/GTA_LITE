@@ -58,7 +58,13 @@ func load_game() -> bool:
 		if player_data.has("health"):
 			Globals.player.health = player_data["health"]
 		if player_data.has("position"):
-			Globals.player.global_position = str_to_var(player_data["position"])
+			var pos_str = player_data["position"]
+			# Safe deserialization: only allow Vector3 types
+			var parsed = str_to_var(pos_str)
+			if parsed is Vector3:
+				Globals.player.global_position = parsed
+			else:
+				print("Warning: Invalid position data in save file")
 	
 	# Load globals data
 	var globals_data = save_data.get("globals", {})
@@ -75,8 +81,8 @@ func load_game() -> bool:
 	return true
 
 func delete_save():
-	var file = FileAccess.open(save_file_path, FileAccess.WRITE)
-	if file != null:
+	if FileAccess.file_exists(save_file_path):
+		DirAccess.remove_absolute(save_file_path)
 		print("Save deleted!")
 
 func _get_story_progress() -> int:

@@ -235,14 +235,18 @@ func _end_intro():
 	if intro_overlay and is_instance_valid(intro_overlay):
 		intro_overlay.queue_free()
 		intro_overlay = null
-	# Restore player
+	# Restore player — use activate_player_camera which handles reparented pivot
 	if player:
-		player.intro_mode = false
-		player.visible = true
-		# Re-activate player camera
-		var cam = player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D")
-		if cam:
-			cam.current = true
+		if player.has_method("activate_player_camera"):
+			player.activate_player_camera()
+		else:
+			player.intro_mode = false
+			player.visible = true
+			# Fallback: find camera via the reparented pivot
+			if player.camera_pivot:
+				var cam = player.camera_pivot.get_node_or_null("SpringArm3D/Camera3D")
+				if cam:
+					cam.current = true
 	_fade_out_intro_music()
 
 func _play_intro_music():

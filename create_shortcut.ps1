@@ -4,6 +4,7 @@ $shortcutPath = Join-Path $desktop "Gangster Town Adventures.lnk"
 $shortcut = $ws.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = "D:\GTA_LITE\GangsterTownAdventures\build\GangsterTownAdventures.exe"
 $shortcut.WorkingDirectory = "D:\GTA_LITE\GangsterTownAdventures\build"
-$shortcut.Description = "Gangster Town Adventures - Vice City Style"
+$shortcut.Description = "Gangster Town Adventures - Vice City Style Open World Game"
+$shortcut.IconLocation = "D:\GTA_LITE\GangsterTownAdventures\build\GangsterTownAdventures.ico"
 $shortcut.Save()
 Write-Host "Desktop shortcut created at: $shortcutPath"
